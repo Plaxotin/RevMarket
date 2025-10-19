@@ -43,17 +43,17 @@ export const StickyActions = ({ searchQuery, onSearchChange }: StickyActionsProp
               variant="outline" 
               size="lg"
               onClick={handleSearchClick}
-              className="bg-background/10 backdrop-blur-sm border-primary/20 hover:bg-background/20 hover:text-foreground shadow-lg"
+              className="bg-background/10 backdrop-blur-sm border-primary/20 hover:bg-background/20 shadow-lg"
             >
               <Search className="w-5 h-5" />
-              Поиск по каталогу
+              Каталог потребностей
             </Button>
           ) : (
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Поиск по каталогу"
+                placeholder="Поиск по запросам..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-10 pr-10 h-12 shadow-lg"
