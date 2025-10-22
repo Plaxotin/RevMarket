@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -39,10 +41,23 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%));
+    /* Обновленные градиенты для современного дизайна */
+    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 60% 97%));
+    --gradient-purple: linear-gradient(135deg, hsl(262 83% 58%), hsl(330 81% 60%));
+    --gradient-blue: linear-gradient(135deg, hsl(220 90% 56%), hsl(262 83% 58%));
+    --gradient-pink: linear-gradient(135deg, hsl(330 81% 60%), hsl(262 83% 58%));
+    --gradient-yellow: linear-gradient(135deg, hsl(45 93% 47%), hsl(25 95% 53%));
+    --gradient-orange: linear-gradient(135deg, hsl(25 95% 53%), hsl(45 93% 47%));
+    --gradient-green: linear-gradient(135deg, hsl(142 76% 36%), hsl(34 97% 56%));
+    --gradient-indigo: linear-gradient(135deg, hsl(238 100% 70%), hsl(262 83% 58%));
+    
     --shadow-card: 0 4px 24px -2px hsl(262 83% 58% / 0.1);
     --shadow-hover: 0 8px 32px -4px hsl(262 83% 58% / 0.2);
+    --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.3);
+    --shadow-glow-pink: 0 0 20px hsl(330 81% 60% / 0.3);
+    --shadow-glow-blue: 0 0 20px hsl(220 90% 56% / 0.3);
+    --shadow-glow-yellow: 0 0 20px hsl(45 93% 47% / 0.3);
     
     --green-50: 240 253 244;
     --green-100: 220 252 231;
@@ -83,10 +98,23 @@ All colors MUST be HSL.
     --input: 240 6% 18%;
     --ring: 262 83% 58%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%));
+    /* Обновленные градиенты для темной темы */
+    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%));
     --gradient-card: linear-gradient(145deg, hsl(240 8% 12%), hsl(240 6% 15%));
+    --gradient-purple: linear-gradient(135deg, hsl(262 83% 58%), hsl(330 81% 60%));
+    --gradient-blue: linear-gradient(135deg, hsl(220 90% 56%), hsl(262 83% 58%));
+    --gradient-pink: linear-gradient(135deg, hsl(330 81% 60%), hsl(262 83% 58%));
+    --gradient-yellow: linear-gradient(135deg, hsl(45 93% 47%), hsl(25 95% 53%));
+    --gradient-orange: linear-gradient(135deg, hsl(25 95% 53%), hsl(45 93% 47%));
+    --gradient-green: linear-gradient(135deg, hsl(142 76% 36%), hsl(34 97% 56%));
+    --gradient-indigo: linear-gradient(135deg, hsl(238 100% 70%), hsl(262 83% 58%));
+    
     --shadow-card: 0 4px 24px -2px hsl(262 83% 58% / 0.15);
     --shadow-hover: 0 8px 32px -4px hsl(262 83% 58% / 0.25);
+    --shadow-glow: 0 0 20px hsl(262 83% 58% / 0.4);
+    --shadow-glow-pink: 0 0 20px hsl(330 81% 60% / 0.4);
+    --shadow-glow-blue: 0 0 20px hsl(220 90% 56% / 0.4);
+    --shadow-glow-yellow: 0 0 20px hsl(45 93% 47% / 0.4);
     
     --green-50: 20 83% 45%;
     --green-100: 22 78% 50%;
@@ -104,6 +132,158 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+/* Кастомные анимации для современного дизайна */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out;
+  }
+  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+  
+  .animate-bounce-slow {
+    animation: bounce-slow 2s infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 2s infinite;
+  }
+}
+
+/* Кастомные keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Утилиты для градиентов */
+@layer utilities {
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .bg-gradient-purple {
+    background: var(--gradient-purple);
+  }
+  
+  .bg-gradient-blue {
+    background: var(--gradient-blue);
+  }
+  
+  .bg-gradient-pink {
+    background: var(--gradient-pink);
+  }
+  
+  .bg-gradient-yellow {
+    background: var(--gradient-yellow);
+  }
+  
+  .bg-gradient-orange {
+    background: var(--gradient-orange);
+  }
+  
+  .bg-gradient-green {
+    background: var(--gradient-green);
+  }
+  
+  .bg-gradient-indigo {
+    background: var(--gradient-indigo);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .shadow-glow-pink {
+    box-shadow: var(--shadow-glow-pink);
+  }
+  
+  .shadow-glow-blue {
+    box-shadow: var(--shadow-glow-blue);
+  }
+  
+  .shadow-glow-yellow {
+    box-shadow: var(--shadow-glow-yellow);
+  }
+  
+  /* Утилиты для кнопок */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-300 transition-colors duration-200;
+  }
+  
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-accent-purple text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105;
+  }
+  
+  /* Утилиты для карточек */
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+  
+  .card-gradient-hover {
+    @apply card-gradient hover:shadow-lg hover:scale-105 transition-all duration-300;
   }
 }
