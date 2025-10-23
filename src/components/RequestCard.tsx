@@ -78,8 +78,7 @@ export const RequestCard = ({
             </span>
             <Link to={`/request/${id}`}>
               <Button className="text-sm md:text-base">
-                <span className="md:hidden">Посмотреть</span>
-                <span className="hidden md:inline">Посмотреть предложения</span>
+                Посмотреть
               </Button>
             </Link>
           </div>
