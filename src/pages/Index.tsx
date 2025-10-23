@@ -5,10 +5,16 @@ import { StickyActions } from "@/components/StickyActions";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Filter, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FILTER_CATEGORIES } from "@/data/categories";
 import { checkAuth } from "@/utils/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -99,7 +105,34 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 animate-fade-in max-w-5xl mx-auto">
+        {/* Мобильная версия - выпадающий список фильтров */}
+        <div className="md:hidden mb-8 animate-fade-in">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4" />
+                  <span>Фильтры: {selectedCategory}</span>
+                </div>
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-full">
+              {categories.map((category) => (
+                <DropdownMenuItem
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
+                >
+                  {category}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Десктопная версия - обычные кнопки фильтров */}
+        <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-8 animate-fade-in max-w-5xl mx-auto">
           {categories.map((category) => (
             <Button
               key={category}
@@ -117,10 +150,29 @@ const Index = () => {
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-lg text-muted-foreground">
-              Запросов пока нет. Создайте первый!
-            </p>
+          <div className="text-center py-16 min-h-[50vh] flex flex-col justify-center">
+            <div className="mb-8">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-primary/20 to-accent-purple/20 rounded-full flex items-center justify-center">
+                <svg className="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">
+                Запросов пока нет
+              </h3>
+              <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
+                Создайте первый запрос и начните получать предложения от продавцов!
+              </p>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-primary to-accent-purple text-white hover:shadow-lg hover:scale-105 transition-all duration-300"
+              >
+                Создать первый запрос
+              </Button>
+            </div>
+            
+            {/* Дополнительное пространство для предотвращения скролла */}
+            <div className="h-32"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

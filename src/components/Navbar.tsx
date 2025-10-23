@@ -104,12 +104,47 @@ export const Navbar = ({ onCityChange }: NavbarProps) => {
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-3">
+          {/* Logo - всегда видимый */}
+          <Link to="/" className="flex items-center gap-3 flex-shrink-0">
             <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-xl font-bold">РеверсМаркет</span>
           </Link>
           
-          <div className="flex items-center gap-4">
+          {/* Мобильная версия - скрываем селектор города */}
+          <div className="flex items-center gap-2 md:hidden">
+            {user ? (
+              <>
+                <Button variant="ghost" asChild className="p-2">
+                  <Link to="/profile">
+                    <User className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button variant="default" asChild className="px-3">
+                  <Link to="/create-request">
+                    <span className="text-sm">Создать</span>
+                  </Link>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  title="Выйти из аккаунта"
+                  className="p-2"
+                >
+                  <LogOut className="w-5 h-5" />
+                </Button>
+              </>
+            ) : (
+              <Button variant="default" asChild className="px-3">
+                <Link to="/auth">
+                  <span className="text-sm">Войти</span>
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {/* Десктопная версия - полное меню */}
+          <div className="hidden md:flex items-center gap-4">
             <Select value={selectedCity} onValueChange={handleCityChange}>
               <SelectTrigger className="w-[180px]">
                 <MapPin className="w-4 h-4 mr-2" />

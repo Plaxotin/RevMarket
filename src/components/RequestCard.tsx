@@ -46,7 +46,7 @@ export const RequestCard = ({
             )}
           </div>
         </div>
-        <CardTitle className="text-xl mb-3">
+        <CardTitle className="text-lg md:text-xl mb-3">
           <Link 
             to={`/request/${id}`} 
             className="hover:text-primary transition-colors cursor-pointer"
@@ -54,21 +54,21 @@ export const RequestCard = ({
             {title}
           </Link>
         </CardTitle>
-        <CardDescription className="text-base leading-relaxed">{description}</CardDescription>
+        <CardDescription className="text-sm md:text-base leading-tight md:leading-relaxed">{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              <span className="text-lg font-bold text-foreground">₽</span>
-              <span className="text-lg font-bold text-foreground">{budget}</span>
+              <span className="text-sm md:text-lg font-bold text-foreground">₽</span>
+              <span className="text-sm md:text-lg font-bold text-foreground">{budget}</span>
             </div>
             <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
+              <MapPin className="w-3 h-3 md:w-4 md:h-4" />
               <span>{location}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-3 h-3 md:w-4 md:h-4" />
               <span>{timeAgo}</span>
             </div>
           </div>
@@ -77,7 +77,10 @@ export const RequestCard = ({
               {offersCount} {offersCount === 1 ? "предложение" : "предложений"}
             </span>
             <Link to={`/request/${id}`}>
-              <Button>Посмотреть предложения</Button>
+              <Button className="text-sm md:text-base">
+                <span className="md:hidden">Посмотреть</span>
+                <span className="hidden md:inline">Посмотреть предложения</span>
+              </Button>
             </Link>
           </div>
         </div>

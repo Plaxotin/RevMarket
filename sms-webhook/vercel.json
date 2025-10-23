@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/send-sms.js": {
+      "maxDuration": 10
+    }
+  },
+  "env": {
+    "SMS_PROVIDER": "@sms-provider",
+    "SMS_API_KEY": "@sms-api-key",
+    "SMS_SENDER": "@sms-sender",
+    "SMS_AERO_EMAIL": "@sms-aero-email"
+  }
+}

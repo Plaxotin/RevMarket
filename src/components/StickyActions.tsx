@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
 import { ArrowRight, Search, X } from "lucide-react";
 import { useState } from "react";
+import { checkAuth } from "@/utils/auth";
 
 interface StickyActionsProps {
   searchQuery: string;
@@ -27,26 +27,41 @@ export const StickyActions = ({ searchQuery, onSearchChange }: StickyActionsProp
     onSearchChange("");
   };
 
+  const handleCreateRequestClick = async () => {
+    const { isAuthenticated } = await checkAuth();
+    
+    if (isAuthenticated) {
+      // Если пользователь авторизован, переходим на страницу создания запроса
+      window.location.href = "/create-request";
+    } else {
+      // Если не авторизован, переходим на страницу регистрации с созданием запроса
+      window.location.href = "/auth-create-request";
+    }
+  };
+
   return (
     <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-md border-b border-border/40 shadow-lg">
       <div className="container px-4 py-2 mx-auto">
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link to="/create-request">
-            <Button variant="hero" size="lg" className="group shadow-lg">
-              Создать запрос
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
+          <Button 
+            variant="hero" 
+            size="lg" 
+            className="group shadow-lg"
+            onClick={handleCreateRequestClick}
+          >
+            Хочу купить
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Button>
           
           {!isSearchOpen ? (
             <Button 
               variant="outline" 
               size="lg"
               onClick={handleSearchClick}
-              className="bg-background/10 backdrop-blur-sm border-primary/20 hover:bg-background/20 shadow-lg"
+              className="bg-background/10 backdrop-blur-sm border-primary/20 hover:bg-background/20 hover:text-accent-purple shadow-lg"
             >
               <Search className="w-5 h-5" />
-              Каталог потребностей
+              Хочу продать
             </Button>
           ) : (
             <div className="relative w-full sm:w-96">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import CreateRequest from "./pages/CreateRequest";
+import AuthCreateRequest from "./pages/AuthCreateRequest";
 import RequestDetail from "./pages/RequestDetail";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/create-request" element={<CreateRequest />} />
+          <Route path="/auth-create-request" element={<AuthCreateRequest />} />
           <Route path="/request/:id" element={<RequestDetail />} />
           <Route path="/seed-data" element={<SeedData />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
