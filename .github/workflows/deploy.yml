@@ -1,38 +1,58 @@
 name: Deploy to GitHub Pages
 
+# Триггеры для запуска
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # Запускается при пуше в main ветку
   pull_request:
-    branches: [ main ]
+    branches: [ main ]  # И при создании PR в main
+
+# Разрешения для GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Защита от одновременного запуска
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  # Сборка проекта
+  build:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout
+    - name: Checkout код
       uses: actions/checkout@v4
       
-    - name: Setup Node.js
+    - name: Настройка Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
         
-    - name: Install dependencies
+    - name: Установка зависимостей
       run: npm ci
       
-    - name: Build
+    - name: Сборка проекта
       run: npm run build
-      env:
-        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-        
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+      
+    - name: Загрузка артефактов
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
+        path: ./dist
 
-
+  # Деплой на GitHub Pages
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Деплой на GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
