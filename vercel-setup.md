@@ -4,6 +4,7 @@
 
 ### **1. ✅ package.json обновлен:**
 - **vite** перенесен в `dependencies` (из `devDependencies`)
+- **terser** добавлен в `dependencies` для minification
 - **Vercel** теперь найдет команду `vite build`
 
 ### **2. ✅ vercel.json настроен:**
@@ -60,7 +61,12 @@ https://your-project-name.vercel.app
 - Проверьте логи в Vercel Dashboard
 - Убедитесь, что все зависимости корректны
 
-### **Проблема 3: 404 на маршрутах**
+### **Проблема 3: "terser not found"**
+- **terser** добавлен в `dependencies`
+- **minify: 'terser'** в vite.config.ts
+- Перезапустите деплой
+
+### **Проблема 4: 404 на маршрутах**
 - Проверьте, что `vercel.json` содержит правильные rewrites
 - Убедитесь, что `base: '/'` в vite.config.ts
 
