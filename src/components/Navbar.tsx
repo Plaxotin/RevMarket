@@ -37,9 +37,10 @@ const getShortCityName = (city: string) => {
 
 interface NavbarProps {
   onCityChange?: (city: string) => void;
+  onSearchOpen?: () => void;
 }
 
-export const Navbar = ({ onCityChange }: NavbarProps) => {
+export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
   const [selectedCity, setSelectedCity] = useState<string>("Россия, все города");
   const [user, setUser] = useState<any>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -163,6 +164,10 @@ export const Navbar = ({ onCityChange }: NavbarProps) => {
               variant="ghost" 
               onClick={() => {
                 navigate("/");
+                // Trigger search open from parent
+                if (onSearchOpen) {
+                  onSearchOpen();
+                }
                 setTimeout(() => {
                   const catalogElement = document.getElementById("catalog");
                   if (catalogElement) {

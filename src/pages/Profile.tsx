@@ -155,7 +155,7 @@ const Profile = () => {
     if (requestsError) {
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить ваши заявки",
+        description: "Не удалось загрузить ваши запросы",
         variant: "destructive",
       });
     } else {
@@ -208,7 +208,7 @@ const Profile = () => {
     if (favoritesError) {
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить избранные заявки",
+        description: "Не удалось загрузить избранные запросы",
         variant: "destructive",
       });
     } else {
@@ -288,13 +288,13 @@ const Profile = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить заявку: " + error.message,
+        description: "Не удалось удалить запрос: " + error.message,
         variant: "destructive",
       });
     } else {
       toast({
         title: "Успешно!",
-        description: "Заявка удалена",
+        description: "Запрос удален",
       });
       // Reload data
       if (user) {
@@ -351,7 +351,7 @@ const Profile = () => {
         
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="requests">Мои заявки ({myRequests.length})</TabsTrigger>
+            <TabsTrigger value="requests">Мои запросы ({myRequests.length})</TabsTrigger>
             <TabsTrigger value="offers">Мои предложения ({myOffers.length})</TabsTrigger>
             <TabsTrigger value="favorites">Избранное ({favoriteRequests.length})</TabsTrigger>
             <TabsTrigger value="settings">Настройки</TabsTrigger>
@@ -361,8 +361,8 @@ const Profile = () => {
             {myRequests.length === 0 ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>У вас пока нет заявок</CardTitle>
-                  <CardDescription>Создайте свою первую заявку</CardDescription>
+                  <CardTitle>У вас пока нет запросов</CardTitle>
+                  <CardDescription>Создайте свой первый запрос</CardDescription>
                 </CardHeader>
               </Card>
             ) : (

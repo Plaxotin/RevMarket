@@ -1,16 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Search, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { checkAuth } from "@/utils/auth";
 
 interface StickyActionsProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSearchOpen?: () => void;
+  triggerSearchOpen?: number;
 }
 
-export const StickyActions = ({ searchQuery, onSearchChange }: StickyActionsProps) => {
+export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, triggerSearchOpen }: StickyActionsProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Watch for trigger to open search from Navbar
+  useEffect(() => {
+    if (triggerSearchOpen && triggerSearchOpen > 0 && !isSearchOpen) {
+      setIsSearchOpen(true);
+    }
+  }, [triggerSearchOpen, isSearchOpen]);
 
   const handleSearchClick = () => {
     // Scroll to catalog first
@@ -19,12 +29,32 @@ export const StickyActions = ({ searchQuery, onSearchChange }: StickyActionsProp
       catalogElement.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     // Open search after a short delay to ensure scroll happens
-    setTimeout(() => setIsSearchOpen(true), 100);
+    setTimeout(() => {
+      setIsSearchOpen(true);
+      // Notify parent component that search is opened
+      if (onSearchOpen) {
+        onSearchOpen();
+      }
+      // Focus on the search input after it becomes visible
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }, 100);
   };
+
+  useEffect(() => {
+    // Also focus when search is opened from Navbar
+    if (isSearchOpen && searchInputRef.current) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isSearchOpen]);
 
   const handleCloseSearch = () => {
     setIsSearchOpen(false);
-    onSearchChange("");
+    // Don't clear the search query, keep it for potential future search
   };
 
   const handleCreateRequestClick = async () => {
@@ -46,33 +76,33 @@ export const StickyActions = ({ searchQuery, onSearchChange }: StickyActionsProp
           <Button 
             variant="hero" 
             size="lg" 
-            className="group shadow-lg"
+            className="group shadow-lg w-full sm:w-[240px]"
             onClick={handleCreateRequestClick}
           >
-            Хочу купить
+            Ищу товар
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
           
           {!isSearchOpen ? (
             <Button 
-              variant="outline" 
+              variant="hero-sell" 
               size="lg"
               onClick={handleSearchClick}
-              className="bg-background/10 backdrop-blur-sm border-primary/20 hover:bg-background/20 hover:text-accent-purple shadow-lg"
+              className="group shadow-lg w-full sm:w-[240px]"
             >
               <Search className="w-5 h-5" />
-              Хочу продать
+              Хочу предложить
             </Button>
           ) : (
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Поиск по запросам..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-10 pr-10 h-12 shadow-lg"
-                autoFocus
               />
               <Button
                 variant="ghost"

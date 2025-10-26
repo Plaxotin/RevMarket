@@ -60,6 +60,7 @@ export type Database = {
           price: string
           request_id: string
           user_id: string
+          images: string[] | null
         }
         Insert: {
           company: string
@@ -70,6 +71,7 @@ export type Database = {
           price: string
           request_id: string
           user_id: string
+          images?: string[] | null
         }
         Update: {
           company?: string
@@ -80,6 +82,7 @@ export type Database = {
           price?: string
           request_id?: string
           user_id?: string
+          images?: string[] | null
         }
         Relationships: [
           {
@@ -136,6 +139,7 @@ export type Database = {
           id: string
           title: string
           user_id: string
+          images: string[] | null
         }
         Insert: {
           budget?: string | null
@@ -147,6 +151,7 @@ export type Database = {
           id?: string
           title: string
           user_id: string
+          images?: string[] | null
         }
         Update: {
           budget?: string | null
@@ -158,6 +163,7 @@ export type Database = {
           id?: string
           title?: string
           user_id?: string
+          images?: string[] | null
         }
         Relationships: [
           {

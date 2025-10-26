@@ -110,9 +110,18 @@ const Auth = () => {
         });
         return false;
       } else {
+        // Получаем имя пользователя из профиля
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", data.user?.id)
+          .single();
+        
+        const userName = profile?.name || "пользователь";
+        
         toast({
           title: "Успешный вход!",
-          description: "Добро пожаловать",
+          description: `Добро пожаловать, ${userName}`,
         });
         navigate("/");
         return true;
@@ -169,6 +178,18 @@ const Auth = () => {
       return;
     }
 
+    // Проверка валидности email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите корректный email адрес",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -179,7 +200,8 @@ const Auth = () => {
           email,
           city: selectedCity || null,
         },
-        emailRedirectTo: `${window.location.origin}/`,
+        // Временно отключено для уменьшения bounced emails
+        // emailRedirectTo: `${window.location.origin}/`,
       },
     });
 
@@ -243,9 +265,18 @@ const Auth = () => {
         variant: "destructive",
       });
     } else {
+      // Получаем имя пользователя из профиля
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", (await supabase.auth.getUser()).data.user?.id)
+        .single();
+      
+      const userName = profile?.name || "пользователь";
+      
       toast({
         title: "Успешный вход!",
-        description: "Добро пожаловать",
+        description: `Добро пожаловать, ${userName}`,
       });
       navigate("/");
     }

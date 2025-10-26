@@ -15,12 +15,17 @@ export const Hero = () => {
       
       <div className="container relative z-10 px-4 py-24 mx-auto">
         <div className="max-w-3xl mx-auto text-center animate-slide-up">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 text-primary-foreground">
-            Скажите, что вам нужно
+          <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+            <span className="bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+              Нужен товар?
+            </span>
+            <br />
+            <span className="text-white animate-slide-up">
+              Размести запрос!
+            </span>
           </h1>
-          <p className="text-xl md:text-2xl text-primary-foreground/90">
-            Маркетплейс, где покупатели размещают свои потребности, 
-            а продавцы дают лучшие предложения
+          <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed animate-fade-in">
+            Маркетплейс, где покупатели публикуют свои желания, а продавцы оставляют лучшие предложения
           </p>
         </div>
       </div>

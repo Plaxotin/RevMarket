@@ -2,6 +2,8 @@ import { Hero } from "@/components/Hero";
 import { RequestCard } from "@/components/RequestCard";
 import { Navbar } from "@/components/Navbar";
 import { StickyActions } from "@/components/StickyActions";
+import { Footer } from "@/components/Footer";
+import { ScrollButtons } from "@/components/ScrollButtons";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,8 +40,13 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchOpenTrigger, setSearchOpenTrigger] = useState(0);
   
   const categories = FILTER_CATEGORIES;
+  
+  const handleOpenSearch = () => {
+    setSearchOpenTrigger(prev => prev + 1);
+  };
 
   useEffect(() => {
     loadRequests();
@@ -51,13 +58,25 @@ const Index = () => {
     setCurrentUser(user);
   };
 
+  const handleCreateFirstRequest = async () => {
+    const { isAuthenticated } = await checkAuth();
+    
+    if (isAuthenticated) {
+      // Если пользователь авторизован, переходим на страницу создания запроса
+      window.location.href = "/create-request";
+    } else {
+      // Если не авторизован, переходим на страницу регистрации с созданием запроса
+      window.location.href = "/auth-create-request";
+    }
+  };
+
   const loadRequests = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("requests")
       .select(`
         *,
-        profiles (
+        profiles!requests_user_id_fkey (
           name
         )
       `)
@@ -90,11 +109,66 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      <Navbar onCityChange={setSelectedCity} />
+      <Navbar onCityChange={setSelectedCity} onSearchOpen={handleOpenSearch} />
       <Hero />
-      <StickyActions searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <StickyActions searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchOpen={handleOpenSearch} triggerSearchOpen={searchOpenTrigger} />
       
-      <section id="catalog" className="container px-4 py-16 mx-auto">
+      {/* Секция "Как это работает?" */}
+      <section id="how-it-works" className="py-16 bg-white scroll-mt-[120px]">
+        <div className="container px-4 mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Как это работает?
+            </h2>
+            <p className="text-lg text-gray-600">
+              Простой процесс в три шага
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Шаг 1 */}
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Создайте заявку</h3>
+              <p className="text-gray-600">
+                Опишите, что вам нужно: название товара, описание, желаемую цену и сроки
+              </p>
+            </div>
+            
+            {/* Шаг 2 */}
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Получите предложения</h3>
+              <p className="text-gray-600">
+                Продавцы найдут вашу заявку и предложат свои варианты с ценами и условиями
+              </p>
+            </div>
+            
+            {/* Шаг 3 */}
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Выберите лучшее</h3>
+              <p className="text-gray-600">
+                Сравните предложения, выберите подходящее и оформите сделку безопасно
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <section id="catalog" className="container px-4 py-16 mx-auto scroll-mt-[120px]">
         <div className="mb-12 text-center animate-fade-in">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Актуальные запросы
@@ -165,17 +239,18 @@ const Index = () => {
               </p>
               <Button 
                 size="lg" 
+                onClick={handleCreateFirstRequest}
                 className="bg-gradient-to-r from-primary to-accent-purple text-white hover:shadow-lg hover:scale-105 transition-all duration-300"
               >
-                Создать первый запрос
+                {currentUser ? "Создать первый запрос" : "Создание запроса и регистрация"}
               </Button>
             </div>
             
             {/* Дополнительное пространство для предотвращения скролла */}
             <div className="h-32"></div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredRequests.map((request, index) => (
               <div 
                 key={request.id} 
@@ -193,14 +268,18 @@ const Index = () => {
                   offersCount={0}
                   userId={request.user_id}
                   currentUserId={currentUser?.id}
+                  images={request.images}
                 />
               </div>
             ))}
           </div>
-        )}
-      </section>
-    </div>
-  );
+                  )}
+        </section>
+        
+        <Footer />
+        <ScrollButtons />
+      </div>
+    );
 };
 
 export default Index;

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Package, MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2 } from "lucide-react";
+import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { checkAuth } from "@/utils/auth";
+import { formatPrice } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -30,6 +35,7 @@ const getTimeAgo = (dateString: string) => {
 const RequestDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -37,16 +43,29 @@ const RequestDetail = () => {
   const [offers, setOffers] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const companyInputRef = useRef<HTMLInputElement>(null);
   const [offerForm, setOfferForm] = useState({
     company: "",
     price: "",
     description: "",
-    contact: "",
+    phone: "",
+    email: "",
   });
 
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // Auto-focus on company input if coming from catalog
+  useEffect(() => {
+    const shouldFocus = new URLSearchParams(location.search).get('focus') === 'true';
+    if (shouldFocus && companyInputRef.current && user) {
+      setTimeout(() => {
+        companyInputRef.current?.focus();
+      }, 500);
+    }
+  }, [location.search, user]);
 
   const loadData = async () => {
     setLoading(true);
@@ -67,9 +86,8 @@ const RequestDetail = () => {
         setOfferForm(prev => ({
           ...prev,
           company: profile.name || prev.company,
-          contact: profile.phone && profile.email 
-            ? `${profile.phone}, ${profile.email}`
-            : profile.phone || profile.email || prev.contact,
+          phone: profile.phone || prev.phone,
+          email: profile.email || prev.email,
         }));
       }
     }
@@ -79,7 +97,7 @@ const RequestDetail = () => {
       .from("requests")
       .select(`
         *,
-        profiles (
+        profiles!requests_user_id_fkey (
           name
         )
       `)
@@ -178,16 +196,39 @@ const RequestDetail = () => {
       return;
     }
 
-    if (!offerForm.company || !offerForm.price || !offerForm.description || !offerForm.contact) {
+    // Проверяем, не создал ли уже пользователь предложение
+    const existingOffer = offers.find(offer => offer.user_id === user.id);
+    if (existingOffer) {
+      toast({
+        title: "Предложение уже создано",
+        description: "Вы уже создали предложение на этот запрос. Для изменения предложения удалите текущее и создайте новое.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!offerForm.company || !offerForm.price || !offerForm.description || !offerForm.phone) {
       toast({
         title: "Ошибка",
-        description: "Заполните все поля",
+        description: "Заполните все обязательные поля",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Валидация email, если он указан
+    if (offerForm.email && !offerForm.email.includes('@')) {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите корректный email адрес",
         variant: "destructive",
       });
       return;
     }
 
     setSubmitting(true);
+
+    const contact = `${offerForm.phone}${offerForm.email ? `, ${offerForm.email}` : ''}`;
 
     const { error } = await supabase
       .from("offers")
@@ -198,7 +239,7 @@ const RequestDetail = () => {
           company: offerForm.company,
           price: offerForm.price,
           description: offerForm.description,
-          contact: offerForm.contact,
+          contact: contact,
         },
       ]);
 
@@ -226,15 +267,14 @@ const RequestDetail = () => {
             company: profile.name || "",
             price: "",
             description: "",
-            contact: profile.phone && profile.email 
-              ? `${profile.phone}, ${profile.email}`
-              : profile.phone || profile.email || "",
+            phone: profile.phone || "",
+            email: profile.email || "",
           });
         } else {
-          setOfferForm({ company: "", price: "", description: "", contact: "" });
+          setOfferForm({ company: "", price: "", description: "", phone: "", email: "" });
         }
       } else {
-        setOfferForm({ company: "", price: "", description: "", contact: "" });
+        setOfferForm({ company: "", price: "", description: "", phone: "", email: "" });
       }
       loadData();
     }
@@ -309,6 +349,40 @@ const RequestDetail = () => {
     setSubmitting(false);
   };
 
+  const openImageModal = (index: number) => {
+    setSelectedImageIndex(index);
+  };
+
+  const closeImageModal = () => {
+    setSelectedImageIndex(null);
+  };
+
+  const goToNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (request?.images && selectedImageIndex !== null) {
+      setSelectedImageIndex((selectedImageIndex + 1) % request.images.length);
+    }
+  };
+
+  const goToPrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (request?.images && selectedImageIndex !== null) {
+      setSelectedImageIndex((selectedImageIndex - 1 + request.images.length) % request.images.length);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (selectedImageIndex === null) return;
+    
+    if (e.key === 'ArrowRight') {
+      goToNextImage(e as any);
+    } else if (e.key === 'ArrowLeft') {
+      goToPrevImage(e as any);
+    } else if (e.key === 'Escape') {
+      closeImageModal();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -358,20 +432,23 @@ const RequestDetail = () => {
                         Удалить запрос
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleToggleFavorite}
-                    >
-                      <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
-                    </Button>
+                    {user && user.id !== request.user_id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleToggleFavorite}
+                        title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
+                      >
+                        <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <CardTitle className="text-3xl">{request.title}</CardTitle>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
                   <div className="flex items-center gap-1">
                     <User className="w-4 h-4" />
-                    <span>{request.profiles?.name || "Аноним"}</span>
+                    <span>{Array.isArray(request.profiles) && request.profiles.length > 0 ? request.profiles[0].name : request.profiles?.name || "Аноним"}</span>
                   </div>
                   {request.city && (
                     <div className="flex items-center gap-1">
@@ -381,8 +458,7 @@ const RequestDetail = () => {
                   )}
                   {request.budget && (
                     <div className="flex items-center gap-1">
-                      <Package className="w-4 h-4" />
-                      <span className="font-semibold text-foreground">{request.budget}</span>
+                      <span className="font-semibold text-foreground">{formatPrice(request.budget)} ₽</span>
                     </div>
                   )}
                 </div>
@@ -390,9 +466,34 @@ const RequestDetail = () => {
               <CardContent>
                 <p className="text-base leading-relaxed mb-4">{request.description}</p>
                 {request.deadline && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-4">
                     <span className="font-semibold">Срок:</span> {request.deadline}
                   </p>
+                )}
+                
+                {/* Отображение изображений */}
+                {request.images && request.images.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
+                      Фотографии ({request.images.length})
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {request.images.map((image: string, index: number) => (
+                        <div 
+                          key={index} 
+                          className="relative aspect-square overflow-hidden rounded-lg border border-border hover:opacity-90 transition-opacity cursor-pointer group"
+                          onClick={() => openImageModal(index)}
+                        >
+                          <img
+                            src={image}
+                            alt={`${request.title} - изображение ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -434,7 +535,7 @@ const RequestDetail = () => {
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-lg font-bold text-primary">{offer.price}</span>
+                                <span className="text-lg font-bold text-primary">{formatPrice(offer.price)} ₽</span>
                                 {user && offer.user_id === user.id && (
                                   <Button
                                     variant="destructive"
@@ -471,10 +572,23 @@ const RequestDetail = () => {
               </CardHeader>
               <CardContent>
                 {user ? (
-                  <form onSubmit={handleSubmitOffer} className="space-y-4">
+                  (() => {
+                    const userOffer = offers.find(offer => offer.user_id === user.id);
+                    if (userOffer) {
+                      return (
+                        <div className="text-center py-8">
+                          <p className="text-sm bg-blue-50 text-blue-700 px-4 py-3 rounded-lg border border-blue-200">
+                            Вы уже создали предложение на этот запрос. Для изменения предложения удалите текущее и создайте новое
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <form onSubmit={handleSubmitOffer} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="company">Компания/Имя *</Label>
                     <Input
+                      ref={companyInputRef}
                       id="company"
                       placeholder={offerForm.company ? "Предзаполнено из профиля" : "Ваше имя или название компании"}
                       value={offerForm.company}
@@ -494,15 +608,31 @@ const RequestDetail = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="contact">Контакт *</Label>
-                    <Input
-                      id="contact"
-                      placeholder={offerForm.contact ? "Предзаполнено из профиля" : "Телефон или email"}
-                      value={offerForm.contact}
-                      onChange={(e) => setOfferForm({ ...offerForm, contact: e.target.value })}
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm">Телефон *</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder={offerForm.phone ? "Предзаполнено из профиля" : "Ваш телефон"}
+                        value={offerForm.phone}
+                        onChange={(e) => setOfferForm({ ...offerForm, phone: e.target.value })}
+                        required
+                        className="h-10"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm">Email (необязательно)</Label>
+                                              <Input
+                          id="email"
+                          type="email"
+                          placeholder={offerForm.email ? "Предзаполнено из профиля" : "your@email.com (необязательно)"}
+                          value={offerForm.email}
+                          onChange={(e) => setOfferForm({ ...offerForm, email: e.target.value })}
+                          className="h-10"
+                        />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -520,7 +650,9 @@ const RequestDetail = () => {
                     <Button type="submit" className="w-full" disabled={submitting}>
                       {submitting ? "Отправка..." : "Отправить предложение"}
                     </Button>
-                  </form>
+                    </form>
+                    );
+                  })()
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-4 opacity-50 pointer-events-none">
@@ -542,13 +674,26 @@ const RequestDetail = () => {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="contact-disabled">Контакт *</Label>
-                        <Input
-                          id="contact-disabled"
-                          placeholder="Войдите, чтобы заполнить"
-                          disabled
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="phone-disabled" className="text-sm">Телефон *</Label>
+                          <Input
+                            id="phone-disabled"
+                            placeholder="Войдите, чтобы заполнить"
+                            disabled
+                            className="h-10"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="email-disabled" className="text-sm">Email (необязательно)</Label>
+                          <Input
+                            id="email-disabled"
+                            placeholder="Войдите, чтобы заполнить"
+                            disabled
+                            className="h-10"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -583,6 +728,56 @@ const RequestDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Модальное окно для просмотра изображений */}
+      {selectedImageIndex !== null && request?.images && (
+        <Dialog open={selectedImageIndex !== null} onOpenChange={(open) => !open && closeImageModal()}>
+          <DialogContent 
+            className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-black/95 border-none"
+            onKeyDown={handleKeyDown}
+          >
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Стрелка влево */}
+              {request.images.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 z-10 text-white hover:bg-white/20 h-12 w-12"
+                  onClick={goToPrevImage}
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </Button>
+              )}
+
+              {/* Изображение */}
+              <img
+                src={request.images[selectedImageIndex]}
+                alt={`${request.title} - изображение ${selectedImageIndex + 1}`}
+                className="max-w-full max-h-[90vh] object-contain"
+              />
+
+              {/* Стрелка вправо */}
+              {request.images.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 z-10 text-white hover:bg-white/20 h-12 w-12"
+                  onClick={goToNextImage}
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              )}
+
+              {/* Счетчик изображений */}
+              {request.images.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full text-white text-sm">
+                  {selectedImageIndex + 1} / {request.images.length}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
