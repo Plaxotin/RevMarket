@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Search, X, FilePlus } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { checkAuth } from "@/utils/auth";
 
@@ -70,7 +70,7 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   };
 
   return (
-    <div className="sticky top-16 z-40 bg-background/80 backdrop-blur-md border-b border-border/40 shadow-lg">
+    <div className="sticky top-16 z-40 bg-background/20 backdrop-blur-md border-b border-border/40 shadow-lg">
       <div className="container px-4 py-2 mx-auto">
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button 
@@ -79,8 +79,8 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
             className="group shadow-lg w-full sm:w-[240px]"
             onClick={handleCreateRequestClick}
           >
+            <FilePlus className="w-[22px] h-[22px]" />
             Ищу товар
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
           
           {!isSearchOpen ? (
@@ -91,7 +91,7 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
               className="group shadow-lg w-full sm:w-[240px]"
             >
               <Search className="w-5 h-5" />
-              Хочу предложить
+              Ищу покупателя
             </Button>
           ) : (
             <div className="relative w-full sm:w-96">

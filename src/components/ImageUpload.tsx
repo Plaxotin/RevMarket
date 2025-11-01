@@ -5,6 +5,13 @@ import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseStorage } from "@/utils/environment";
 
+// Helper function to generate unique filenames
+const generateUniqueFilename = (fileExt: string): string => {
+  const timestamp = Date.now();
+  const randomStr = Math.random().toString(36).substring(2, 15);
+  return `${timestamp}_${randomStr}.${fileExt}`;
+};
+
 interface ImageUploadProps {
   images: string[];
   onImagesChange: (images: string[]) => void;
@@ -44,10 +51,18 @@ export const ImageUpload = ({
     try {
       if (useSupabaseStorage()) {
         // Используем Supabase Storage в продакшене
+        // Get current user ID
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          alert('Необходимо авторизоваться для загрузки изображений');
+          return;
+        }
+
         const uploadPromises = validFiles.map(async (file) => {
           const fileExt = file.name.split('.').pop();
-          const fileName = `${Math.random()}.${fileExt}`;
-          const filePath = `images/${fileName}`;
+          const fileName = generateUniqueFilename(fileExt || 'jpg');
+          const filePath = `${user.id}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('images')
@@ -150,7 +165,7 @@ export const ImageUpload = ({
             variant="outline"
             onClick={openFileDialog}
             disabled={uploading}
-            className="w-full h-24 border-dashed border-2 hover:border-primary/50 transition-colors"
+            className="w-full h-24 border-dashed border-2 hover:bg-blue-500/20 hover:text-foreground transition-colors"
           >
             <div className="flex flex-col items-center gap-2">
               {uploading ? (

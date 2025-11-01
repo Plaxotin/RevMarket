@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Trash2 } from "lucide-react";
 import { checkAuth } from "@/utils/auth";
+import { translateSupabaseError } from "@/utils/errorMessages";
 
 const cities = [
   "Россия, все города",
@@ -240,7 +241,7 @@ const Profile = () => {
     if (profileError) {
       toast({
         title: "Ошибка",
-        description: "Не удалось обновить профиль: " + profileError.message,
+        description: "Не удалось обновить профиль: " + translateSupabaseError(profileError.message),
         variant: "destructive",
       });
       setUpdating(false);
@@ -256,7 +257,7 @@ const Profile = () => {
       if (authError) {
         toast({
           title: "Ошибка",
-          description: "Не удалось обновить email: " + authError.message,
+          description: "Не удалось обновить email: " + translateSupabaseError(authError.message),
           variant: "destructive",
         });
         setUpdating(false);
@@ -275,7 +276,7 @@ const Profile = () => {
   };
 
   const handleDeleteRequest = async (requestId: string) => {
-    if (!confirm("Вы уверены, что хотите удалить эту заявку? Это действие нельзя отменить.")) {
+    if (!confirm("Вы уверены, что хотите удалить этот запрос? Это действие нельзя отменить.")) {
       return;
     }
 
@@ -288,7 +289,7 @@ const Profile = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить запрос: " + error.message,
+        description: "Не удалось удалить запрос: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -317,7 +318,7 @@ const Profile = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить предложение: " + error.message,
+        description: "Не удалось удалить предложение: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -400,7 +401,7 @@ const Profile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>У вас пока нет предложений</CardTitle>
-                  <CardDescription>Откликнитесь на интересующие вас заявки</CardDescription>
+                  <CardDescription>Откликнитесь на интересующие вас запросы</CardDescription>
                 </CardHeader>
               </Card>
             ) : (
@@ -412,7 +413,7 @@ const Profile = () => {
                         <div>
                           <CardTitle>{offer.company}</CardTitle>
                           <CardDescription>
-                            Заявка: {offer.requests.title}
+                            Запрос: {offer.requests.title}
                           </CardDescription>
                         </div>
                         <Button
@@ -440,8 +441,8 @@ const Profile = () => {
             {favoriteRequests.length === 0 ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>У вас нет избранных заявок</CardTitle>
-                  <CardDescription>Добавляйте интересные заявки в избранное</CardDescription>
+                  <CardTitle>У вас нет избранных запросов</CardTitle>
+                  <CardDescription>Добавляйте интересные запросы в избранное</CardDescription>
                 </CardHeader>
               </Card>
             ) : (

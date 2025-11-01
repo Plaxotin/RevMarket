@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logout } from "@/utils/auth";
-import logo from "../../Adobe Express - file.png";
+import { HandshakeIcon } from "./HandshakeIcon";
 
 const cities = [
   "Россия, все города",
@@ -102,25 +102,24 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
+    <nav className="sticky top-0 z-50 bg-black/60 backdrop-blur-md border-b border-white/10">
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-between h-16">
           {/* Logo - всегда видимый */}
           <Link to="/" className="flex items-center gap-3 flex-shrink-0">
-            <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
-            <span className="text-xl font-bold">РеверсМаркет</span>
+            <span className="text-[1.32rem] font-bold text-white">РеверсМаркет</span>
           </Link>
           
           {/* Мобильная версия - скрываем селектор города */}
           <div className="flex items-center gap-2 md:hidden">
             {user ? (
               <>
-                <Button variant="ghost" asChild className="p-2">
+                <Button variant="ghost" asChild className="p-2 text-white hover:bg-gray-700">
                   <Link to="/profile">
                     <User className="w-5 h-5" />
                   </Link>
                 </Button>
-                <Button variant="default" asChild className="px-3">
+                <Button variant="default" asChild className="px-3 bg-gray-700 hover:bg-gray-600 text-white">
                   <Link to="/create-request">
                     <span className="text-sm">Создать</span>
                   </Link>
@@ -130,13 +129,13 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   title="Выйти из аккаунта"
-                  className="p-2"
+                  className="p-2 text-white hover:bg-gray-700"
                 >
                   <LogOut className="w-5 h-5" />
                 </Button>
               </>
             ) : (
-              <Button variant="default" asChild className="px-3">
+              <Button variant="default" asChild className="px-3 bg-white hover:bg-gray-100 text-black">
                 <Link to="/auth">
                   <span className="text-sm">Войти</span>
                 </Link>
@@ -146,20 +145,6 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
 
           {/* Десктопная версия - полное меню */}
           <div className="hidden md:flex items-center gap-4">
-            <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="w-[180px]">
-                <MapPin className="w-4 h-4 mr-2" />
-                <span className="truncate">{getShortCityName(selectedCity)}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
             <Button 
               variant="ghost" 
               onClick={() => {
@@ -175,20 +160,35 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                   }
                 }, 100);
               }}
+              className="text-white hover:bg-purple-600/30"
             >
               <List className="w-5 h-5" />
               Поиск по каталогу
             </Button>
             
+            <Select value={selectedCity} onValueChange={handleCityChange}>
+              <SelectTrigger className="w-[240px] h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30">
+                <MapPin className="w-4 h-4 mr-2" />
+                <span className="truncate">{getShortCityName(selectedCity)}</span>
+              </SelectTrigger>
+              <SelectContent className="bg-black/60 backdrop-blur-md border-white/10">
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city} className="text-white focus:bg-blue-900/30 focus:text-blue-300">
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             {user ? (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" asChild className="text-white hover:bg-gray-700">
                   <Link to="/profile">
                     <User className="w-5 h-5" />
                     Личный кабинет
                   </Link>
                 </Button>
-                <Button variant="default" asChild>
+                <Button variant="default" asChild className="bg-gray-700 hover:bg-gray-600 text-white">
                   <Link to="/create-request">
                     Создать запрос
                   </Link>
@@ -198,13 +198,14 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   title="Выйти из аккаунта"
+                  className="text-white hover:bg-gray-700"
                 >
                   <LogOut className="w-5 h-5" />
                   {isLoggingOut && <span className="ml-2">Выход...</span>}
                 </Button>
               </>
             ) : (
-              <Button variant="default" asChild>
+              <Button variant="default" asChild className="w-[120px] bg-white hover:bg-gray-100 text-black">
                 <Link to="/auth">
                   Войти
                 </Link>

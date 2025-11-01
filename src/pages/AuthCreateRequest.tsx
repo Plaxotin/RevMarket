@@ -16,21 +16,45 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/data/categories";
-import { Loader2 } from "lucide-react";
+import { Loader2, X, HelpCircle } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
+import { translateSupabaseError } from "@/utils/errorMessages";
+import { RubleIcon } from "@/components/RubleIcon";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const categories = CATEGORIES;
+
+const cities = [
+  "Россия, все города",
+  "Москва",
+  "Санкт-Петербург",
+  "Новосибирск",
+  "Екатеринбург",
+  "Казань",
+  "Нижний Новгород",
+  "Челябинск",
+  "Самара",
+  "Омск",
+  "Ростов-на-Дону",
+  "Уфа",
+  "Красноярск",
+  "Воронеж",
+  "Пермь",
+  "Волгоград"
+];
 
 const AuthCreateRequest = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [authData, setAuthData] = useState({
-    email: "",
-    password: "",
-    name: "",
-    phone: "",
-  });
+  const [authStep, setAuthStep] = useState<'phone' | 'code'>('phone');
+  const [phone, setPhone] = useState("");
+  const [smsCode, setSmsCode] = useState("");
+  const [countdown, setCountdown] = useState(0);
   const [requestData, setRequestData] = useState({
     title: "",
     description: "",
@@ -39,36 +63,11 @@ const AuthCreateRequest = () => {
     city: "",
   });
   const [images, setImages] = useState<string[]>([]);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log('Form submission started with data:', {
-      authData,
-      requestData,
-      images: images.length
-    });
-    
-    if (!authData.password || !authData.name || !authData.phone) {
-      toast({
-        title: "Ошибка",
-        description: "Пожалуйста, заполните все обязательные поля для регистрации",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Отладочная информация
-    console.log('Request data validation:', {
-      title: requestData.title,
-      description: requestData.description,
-      category: requestData.category,
-      titleEmpty: !requestData.title,
-      descriptionEmpty: !requestData.description,
-      categoryEmpty: !requestData.category
-    });
-
-    // Проверка на пустые строки и только пробелы
+  // Функция для отправки SMS кода
+  const sendSMSCode = async (phoneNumber: string) => {
+    // Проверяем валидность данных запроса перед отправкой SMS
     const isTitleEmpty = !requestData.title || requestData.title.trim() === '';
     const isDescriptionEmpty = !requestData.description || requestData.description.trim() === '';
     const isCategoryEmpty = !requestData.category || requestData.category.trim() === '';
@@ -84,187 +83,283 @@ const AuthCreateRequest = () => {
         description: `Пожалуйста, заполните: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    // Валидация email только если он указан
-    if (authData.email && authData.email.trim() !== '' && !authData.email.includes('@')) {
+    if (!phoneNumber || phoneNumber.trim() === '') {
       toast({
         title: "Ошибка",
-        description: "Пожалуйста, введите корректный email адрес или оставьте поле пустым",
+        description: "Пожалуйста, введите номер телефона",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    // Валидация пароля
-    if (authData.password.length < 6) {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
+        options: {
+          channel: 'sms'
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Ошибка отправки SMS",
+          description: translateSupabaseError(error.message),
+          variant: "destructive",
+        });
+        return false;
+      } else {
+        toast({
+          title: "SMS отправлен",
+          description: "Код подтверждения отправлен на ваш номер",
+        });
+        setPhone(phoneNumber);
+        setAuthStep('code');
+        startCountdown();
+        return true;
+      }
+    } catch (error) {
       toast({
         title: "Ошибка",
-        description: "Пароль должен содержать минимум 6 символов",
+        description: "Не удалось отправить SMS. Попробуйте позже",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Функция для проверки SMS кода и создания запроса
+  const verifySMSCodeAndCreateRequest = async (code: string) => {
+    if (!code || code.trim() === '') {
+      toast({
+        title: "Ошибка",
+        description: "Пожалуйста, введите код из SMS",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-
     try {
-      // Регистрация пользователя
-      const email = (authData.email && authData.email.trim() !== '' && authData.email.includes('@'))
-        ? authData.email 
-        : `tempuser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}@tempuser.local`;
-        
-      console.log('Attempting signup with:', { email, passwordLength: authData.password.length });
-      
-      const { data: signUpData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: authData.password,
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: code,
+        type: 'sms'
       });
 
-      if (authError) {
-        console.error('Auth error:', authError);
-        
-        // Обработка специфических ошибок
-        let errorMessage = authError.message;
-        if (authError.message.includes('already registered')) {
-          errorMessage = "Пользователь с таким email уже зарегистрирован";
-        } else if (authError.message.includes('Invalid email') || authError.message.includes('invalid')) {
-          errorMessage = "Некорректный email адрес. Попробуйте указать другой email или оставьте поле пустым";
-        } else if (authError.message.includes('Password')) {
-          errorMessage = "Пароль не соответствует требованиям";
-        } else if (authError.message.includes('400')) {
-          errorMessage = "Ошибка валидации данных. Проверьте правильность заполнения полей";
-        }
-        
+      if (error) {
         toast({
-          title: "Ошибка регистрации",
-          description: errorMessage,
+          title: "Неверный код",
+          description: "Проверьте правильность введенного кода",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      if (signUpData.user) {
-        // Принудительный вход в систему
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: authData.password,
-        });
-
-        if (signInError) {
-          console.error("Ошибка входа в систему:", signInError);
-          
-          // Если email не подтвержден, попробуем войти без подтверждения
-          if (signInError.message.includes('Email not confirmed')) {
-            console.log('Email not confirmed, trying alternative approach...');
-            
-            // Попробуем использовать signUp с подтверждением
-            const { data: resendData, error: resendError } = await supabase.auth.resend({
-              type: 'signup',
-              email: email,
-            });
-            
-            if (resendError) {
-              console.error("Ошибка повторной отправки:", resendError);
-            }
-            
-            toast({
-              title: "Требуется подтверждение email",
-              description: "Проверьте почту и подтвердите регистрацию, затем попробуйте войти в систему",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-          
-          toast({
-            title: "Ошибка входа",
-            description: "Не удалось войти в систему после регистрации",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Создание профиля пользователя
-        const { error: profileError } = await supabase
+      // Проверяем, существует ли профиль, и создаем его автоматически, если нужно
+      try {
+        const { data: existingProfile } = await supabase
           .from("profiles")
-          .insert([
-            {
-              id: signUpData.user.id,
-              name: authData.name,
-              phone: authData.phone,
-              email: authData.email || null,
-            },
-          ]);
-
-        if (profileError) {
-          console.error("Ошибка создания профиля:", profileError);
-        }
-
-        // Проверяем, что пользователь авторизован
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
+          .select("id")
+          .eq("id", data.user?.id)
+          .single();
         
-        console.log('Current user after signup:', currentUser);
-        
-        if (!currentUser) {
-          toast({
-            title: "Ошибка авторизации",
-            description: "Пользователь не авторизован",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
+        if (!existingProfile) {
+          // Создаем профиль автоматически если его нет
+          const { error: insertError } = await supabase
+            .from("profiles")
+            .insert([
+              {
+                id: data.user?.id,
+                name: "Пользователь",
+                phone: phone,
+                email: null,
+                city: requestData.city || null,
+              },
+            ]);
+          
+          if (insertError) {
+            console.warn("Could not create profile:", insertError);
+          }
+        } else if (requestData.city) {
+          // Обновляем город в профиле, если он указан
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({ city: requestData.city })
+            .eq("id", data.user?.id);
+          
+          if (updateError) {
+            console.warn("Could not update profile city:", updateError);
+          }
         }
+      } catch (error) {
+        console.error("Error handling profile:", error);
+      }
 
-        // Создание запроса
-        const { error: requestError } = await supabase
-          .from("requests")
-          .insert([
-            {
-              user_id: currentUser.id,
-              title: requestData.title,
-              description: requestData.description,
-              category: requestData.category,
-              budget: requestData.budget || null,
-              city: requestData.city || null,
-              images: images.length > 0 ? images : null,
-            },
-          ]);
+      // Проверяем, что пользователь авторизован
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        toast({
+          title: "Ошибка авторизации",
+          description: "Пользователь не авторизован",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-        if (requestError) {
-          toast({
-            title: "Ошибка создания запроса",
-            description: requestError.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Успешно!",
-            description: "Вы зарегистрированы и запрос создан",
-          });
-          navigate("/");
-        }
+      // Создание запроса
+      const { error: requestError } = await supabase
+        .from("requests")
+        .insert([
+          {
+            user_id: currentUser.id,
+            title: requestData.title,
+            description: requestData.description,
+            category: requestData.category,
+            budget: requestData.budget || null,
+            city: requestData.city || null,
+            images: images.length > 0 ? images : null,
+          },
+        ]);
+
+      if (requestError) {
+        toast({
+          title: "Ошибка создания запроса",
+          description: translateSupabaseError(requestError.message),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Успешно!",
+          description: "Запрос создан",
+        });
+        navigate("/");
       }
     } catch (error) {
       console.error("Ошибка:", error);
       toast({
         title: "Ошибка",
-        description: "Произошла ошибка при регистрации",
+        description: "Произошла ошибка при проверке кода",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setLoading(false);
+  // Функция для обратного отсчета
+  const startCountdown = () => {
+    setCountdown(60);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Функция для повторной отправки SMS
+  const resendSMS = async () => {
+    if (countdown > 0) return;
+    await sendSMSCode(phone);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (authStep === 'phone') {
+      await sendSMSCode(phone);
+    } else {
+      await verifySMSCodeAndCreateRequest(smsCode);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar onCityChange={() => {}} />
-      <div className="container px-4 py-12 mx-auto max-w-4xl">
-        <Card className="shadow-card animate-slide-up">
+    <div className="min-h-screen relative">
+      {/* Градиентный фон на весь сайт */}
+      <div className="fixed inset-0 z-0 bg-gradient-hero opacity-90" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))' }} />
+      
+      {/* Контент поверх градиента */}
+      <div className="relative z-10">
+        <Navbar onCityChange={() => {}} />
+        <div className="container px-4 py-12 mx-auto max-w-4xl relative">
+          {/* Секция "Как это работает?" */}
+          <div className="mb-8" style={{ background: 'transparent' }}>
+            <div className="text-center">
+              <Collapsible open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
+                <CollapsibleTrigger className="inline-flex items-center gap-3 hover:opacity-80 transition-opacity">
+                  <h2 className="text-[0.9rem] md:text-[1.2rem] font-bold text-white">
+                    Как это работает?
+                  </h2>
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                    <HelpCircle className="w-6 h-6 text-white" />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    {/* Шаг 1 */}
+                    <div className="text-center">
+                      <div className="w-[68px] h-[68px] mx-auto mb-5 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-[34px] h-[34px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold mb-2 text-white">Создайте заявку</h3>
+                      <p className="text-sm text-white/90">
+                        Опишите, что вам нужно: название товара, описание, желаемую цену и сроки
+                      </p>
+                    </div>
+                    
+                    {/* Шаг 2 */}
+                    <div className="text-center">
+                      <div className="w-[68px] h-[68px] mx-auto mb-5 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                        <RubleIcon className="w-[34px] h-[34px]" />
+                      </div>
+                      <h3 className="text-lg font-bold mb-2 text-white">Получите предложения</h3>
+                      <p className="text-sm text-white/90">
+                        Продавцы найдут вашу заявку и предложат свои варианты с ценами и условиями
+                      </p>
+                    </div>
+                    
+                    {/* Шаг 3 */}
+                    <div className="text-center">
+                      <div className="w-[68px] h-[68px] mx-auto mb-5 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-[34px] h-[34px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold mb-2 text-white">Выберите лучшее</h3>
+                      <p className="text-sm text-white/90">
+                        Сравните предложения, выберите подходящее и оформите сделку безопасно
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </div>
+          
+          <Card className="shadow-card animate-slide-up relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-20"
+            onClick={() => navigate("/")}
+          >
+            <X className="h-6 w-6" />
+          </Button>
           <CardHeader>
             <CardTitle className="text-3xl">Создание запроса и регистрация</CardTitle>
             <CardDescription className="text-base">
@@ -272,12 +367,9 @@ const AuthCreateRequest = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Данные запроса */}
-              <div className="space-y-6">
-                <div className="border-b pb-4">
-                </div>
-                
+              <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="title">Название *</Label>
                   <Input
@@ -285,7 +377,7 @@ const AuthCreateRequest = () => {
                     placeholder="Например: Ищу iPhone 15 Pro"
                     value={requestData.title}
                     onChange={(e) => setRequestData({ ...requestData, title: e.target.value })}
-                    required
+                    disabled={authStep === 'code'}
                   />
                 </div>
 
@@ -294,22 +386,33 @@ const AuthCreateRequest = () => {
                   <Textarea
                     id="description"
                     placeholder="Подробно опишите, что вам нужно..."
-                    className="min-h-[120px]"
+                    className="min-h-[60px] max-h-[150px] resize-none overflow-hidden"
                     value={requestData.description}
-                    onChange={(e) => setRequestData({ ...requestData, description: e.target.value })}
-                    required
+                    onChange={(e) => {
+                      const lines = e.target.value.split('\n');
+                      if (lines.length <= 5) {
+                        setRequestData({ ...requestData, description: e.target.value });
+                      }
+                    }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+                    }}
+                    disabled={authStep === 'code'}
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Категория *</Label>
                     <Select
                       value={requestData.category}
                       onValueChange={(value) => setRequestData({ ...requestData, category: value })}
+                      disabled={authStep === 'code'}
                     >
-                      <SelectTrigger id="category" className={!requestData.category ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Выберите категорию (обязательно)" />
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Выберите категорию" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((category) => (
@@ -319,9 +422,6 @@ const AuthCreateRequest = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {!requestData.category && (
-                      <p className="text-sm text-red-500">⚠️ Пожалуйста, выберите категорию</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -331,46 +431,30 @@ const AuthCreateRequest = () => {
                       placeholder="Например: 50 000 - 70 000 ₽"
                       value={requestData.budget}
                       onChange={(e) => setRequestData({ ...requestData, budget: e.target.value })}
+                      disabled={authStep === 'code'}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">Город</Label>
-                    <Input
-                      id="city"
-                      placeholder="Россия, все города"
+                    <Select
                       value={requestData.city}
-                      onChange={(e) => setRequestData({ ...requestData, city: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Загрузка изображений */}
-              <ImageUpload
-                images={images}
-                onImagesChange={setImages}
-                maxImages={5}
-                className="pt-4"
-              />
-
-              {/* Данные для регистрации */}
-              <div className="space-y-6">
-                <div className="border-b pb-4">
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Имя *</Label>
-                    <Input
-                      id="name"
-                      placeholder="Ваше имя"
-                      value={authData.name}
-                      onChange={(e) => setAuthData({ ...authData, name: e.target.value })}
-                      required
-                    />
+                      onValueChange={(value) => setRequestData({ ...requestData, city: value })}
+                      disabled={authStep === 'code'}
+                    >
+                      <SelectTrigger id="city">
+                        <SelectValue placeholder="Выберите город" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cities.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -378,63 +462,152 @@ const AuthCreateRequest = () => {
                     <Input
                       id="phone"
                       placeholder="+7 (999) 123-45-67"
-                      value={authData.phone}
-                      onChange={(e) => setAuthData({ ...authData, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com (необязательно - можно оставить пустым)"
-                      value={authData.email}
-                      onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Пароль *</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Минимум 6 символов"
-                      value={authData.password}
-                      onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
-                      required
+                      value={phone}
+                      onChange={(e) => {
+                        let value = e.target.value;
+                        // Разрешаем только цифры и "+"
+                        value = value.replace(/[^+\d]/g, '');
+                        // Если в начале вводят 9, добавляем +7
+                        if (value.startsWith('9')) {
+                          value = '+7' + value;
+                        }
+                        // Если вводят "+", разрешаем его только первым символом
+                        if (value.startsWith('+')) {
+                          setPhone(value);
+                        } else if (/^\d/.test(value)) {
+                          // Если начинается с цифры (но не с 9), то добавляем +7
+                          if (value.startsWith('7')) {
+                            setPhone('+' + value);
+                          } else if (value.startsWith('8')) {
+                            setPhone('+7' + value.substring(1));
+                          } else {
+                            setPhone(value);
+                          }
+                        } else {
+                          setPhone(value);
+                        }
+                      }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLInputElement;
+                        let value = target.value.replace(/[^+\d]/g, '');
+                        // Форматируем номер в маске +7 (999) 123-45-67
+                        if (value.startsWith('+7')) {
+                          const digits = value.substring(2).replace(/\D/g, '');
+                          if (digits.length === 0) {
+                            target.value = '+7';
+                          } else if (digits.length <= 3) {
+                            target.value = `+7 (${digits}`;
+                          } else if (digits.length <= 6) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                          } else if (digits.length <= 8) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                          } else {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+                          }
+                          setPhone(target.value);
+                        } else if (value.startsWith('7')) {
+                          const digits = value.substring(1).replace(/\D/g, '');
+                          if (digits.length === 0) {
+                            target.value = '+7';
+                          } else if (digits.length <= 3) {
+                            target.value = `+7 (${digits}`;
+                          } else if (digits.length <= 6) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                          } else if (digits.length <= 8) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                          } else {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+                          }
+                          setPhone(target.value);
+                        } else if (value.startsWith('8')) {
+                          const digits = value.substring(1).replace(/\D/g, '');
+                          if (digits.length === 0) {
+                            target.value = '+7';
+                          } else if (digits.length <= 3) {
+                            target.value = `+7 (${digits}`;
+                          } else if (digits.length <= 6) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                          } else if (digits.length <= 8) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                          } else {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+                          }
+                          setPhone(target.value);
+                        } else if (value.startsWith('9') || value.match(/^\d/)) {
+                          const digits = value.replace(/\D/g, '');
+                          if (digits.length === 0) {
+                            target.value = '';
+                          } else if (digits.length <= 3) {
+                            target.value = `+7 (${digits}`;
+                          } else if (digits.length <= 6) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                          } else if (digits.length <= 8) {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+                          } else {
+                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+                          }
+                          setPhone(target.value);
+                        }
+                      }}
+                      disabled={authStep === 'code'}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-6">
-                <Button type="submit" size="lg" className="flex-1" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Регистрация...
-                    </>
-                  ) : (
-                    "Зарегистрироваться и опубликовать запрос"
+              {/* Поле для SMS кода */}
+              {authStep === 'code' && (
+                <div className="space-y-2">
+                  <Label htmlFor="smsCode">Код из SMS *</Label>
+                  <Input
+                    id="smsCode"
+                    placeholder="Введите код из SMS"
+                    value={smsCode}
+                    onChange={(e) => setSmsCode(e.target.value)}
+                    maxLength={6}
+                  />
+                  {countdown > 0 && (
+                    <p className="text-sm text-gray-500">
+                      Отправить повторно через {countdown} сек.
+                    </p>
                   )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={() => navigate("/")}
-                  disabled={loading}
-                >
-                  Отмена
+                  {countdown === 0 && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={resendSMS}
+                      className="p-0 h-auto"
+                    >
+                      Отправить код повторно
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Загрузка изображений */}
+              <ImageUpload
+                images={images}
+                onImagesChange={setImages}
+                maxImages={5}
+                className=""
+              />
+
+              <div className="pt-4">
+                <Button type="submit" size="lg" className="w-full" variant={authStep === 'phone' ? 'sms-gradient' : 'default'} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {authStep === 'phone' ? "Отправка SMS..." : "Проверка кода..."}
+                  </>
+                ) : (
+                  authStep === 'phone' ? "Отправить SMS код" : "Подтвердить код и создать запрос"
+                )}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

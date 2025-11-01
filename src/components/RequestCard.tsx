@@ -28,87 +28,87 @@ const categoryConfig: Record<string, {
   iconColor: string;
 }> = {
   "Электроника": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-purple-400",
+    iconBg: "bg-purple-500",
     iconColor: "text-white"
   },
   "Дизайн": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-pink-400",
+    iconBg: "bg-pink-500",
     iconColor: "text-white"
   },
   "Мебель": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-amber-400",
+    iconBg: "bg-amber-500",
     iconColor: "text-white"
   },
   "Образование": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-blue-400",
+    iconBg: "bg-blue-500",
     iconColor: "text-white"
   },
   "Авто": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-red-400",
+    iconBg: "bg-red-500",
     iconColor: "text-white"
   },
   "Одежда и аксессуары": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-teal-400",
+    iconBg: "bg-teal-500",
     iconColor: "text-white"
   },
   "Хобби и отдых": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-yellow-400",
+    iconBg: "bg-yellow-500",
     iconColor: "text-white"
   },
   "Животные": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-green-400",
+    iconBg: "bg-[#6B8E23]",
     iconColor: "text-white"
   },
   "Запчасти": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-orange-400",
+    iconBg: "bg-orange-500",
     iconColor: "text-white"
   },
   "Детские товары": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-cyan-400",
+    iconBg: "bg-cyan-500",
     iconColor: "text-white"
   },
   "Недвижимость": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-indigo-400",
+    iconBg: "bg-indigo-500",
     iconColor: "text-white"
   },
   "Красота и здоровье": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-rose-400",
+    iconBg: "bg-rose-500",
     iconColor: "text-white"
   },
   "Другое": {
-    bgGradient: "from-gray-50 to-slate-100",
+    bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
-    iconBg: "bg-slate-400",
+    iconBg: "bg-slate-500",
     iconColor: "text-white"
   },
   "default": { 
-    bgGradient: "from-gray-50 to-slate-100", 
+    bgGradient: "from-white to-gray-50", 
     borderColor: "border-gray-200",
-    iconBg: "bg-gray-400",
+    iconBg: "bg-gray-500",
     iconColor: "text-white"
   }
 };
@@ -209,12 +209,12 @@ export const RequestCard = ({
   useEffect(() => {
     const checkFavorite = async () => {
       if (currentUserId && !isOwner) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('favorites')
           .select('id')
           .eq('user_id', currentUserId)
           .eq('request_id', id)
-          .single();
+          .maybeSingle();
         setIsFavorite(!!data);
       }
     };
@@ -264,26 +264,33 @@ export const RequestCard = ({
   };
   
   return (
-    <Card 
-      className={`bg-gradient-to-br ${config.bgGradient} ${config.borderColor} border rounded-2xl hover:shadow-lg transition-all duration-300 animate-fade-in flex flex-col h-full relative`}
-    >
-      {/* Кнопка избранного в правом верхнем углу */}
-      {currentUserId && !isOwner && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleFavorite}
-          disabled={isLoading}
-          className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-white/80"
-          title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
-        >
-          <Heart 
-            className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} 
-          />
-        </Button>
-      )}
-      
-      <CardContent className="p-6">
+    <Link to={`/request/${id}`} className="block h-full">
+      <Card 
+        className={`group bg-gradient-to-br ${config.bgGradient} ${config.borderColor} border rounded-2xl hover:shadow-lg transition-all duration-300 animate-fade-in flex flex-col h-full relative cursor-pointer overflow-hidden`}
+      >
+        {/* Overlay при наведении */}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
+          <div className="bg-black/40 backdrop-blur-sm px-1 py-0.5 rounded">
+            <span className="text-white text-[13.68px] font-normal">Посмотреть</span>
+          </div>
+        </div>
+        {/* Кнопка избранного в правом верхнем углу */}
+        {currentUserId && !isOwner && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFavorite}
+            disabled={isLoading}
+            className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-white/80 z-20"
+            title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
+          >
+            <Heart 
+              className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} 
+            />
+          </Button>
+        )}
+        
+        <CardContent className="p-6">
         <div className="flex items-center mb-4">
           {images && images.length > 0 ? (
             <div className="w-12 h-12 rounded-xl overflow-hidden mr-4 flex-shrink-0 relative">
@@ -315,24 +322,19 @@ export const RequestCard = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <Link to={`/request/${id}`}>
-              <h3 className="font-bold text-gray-900 truncate mb-1 hover:text-primary transition-colors">{title}</h3>
-            </Link>
-            <p className="text-sm text-gray-600 truncate">{budget ? `${formatPrice(budget)} ₽` : "Бюджет не указан"}</p>
+            <h3 className="font-bold text-gray-900 line-clamp-2 mb-1 hover:text-primary transition-colors min-h-[2.5rem]">{title}</h3>
           </div>
         </div>
         
-        <Link to={`/request/${id}`} className="block mb-4">
-          <p 
-            className="text-gray-700 text-sm line-clamp-2 hover:text-primary transition-colors cursor-pointer min-h-[2.5rem]"
-            title={description}
-          >
-            {description || "\u00A0"}
-          </p>
-        </Link>
+        <p 
+          className="text-gray-700 text-sm line-clamp-2 hover:text-primary transition-colors cursor-pointer min-h-[2.5rem] mb-4"
+          title={description}
+        >
+          {description || "\u00A0"}
+        </p>
 
-        {(location || timeAgo) && (
-          <div className="flex items-center gap-3 text-xs text-gray-600 flex-wrap mb-3">
+        {(location || timeAgo || budget) && (
+          <div className="space-y-1 text-xs text-gray-600">
             {location && location !== "Не указан" && (
               <div className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
@@ -343,26 +345,18 @@ export const RequestCard = ({
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 <span>{timeAgo}</span>
+                {budget && <span className="ml-2">• {budget ? `${formatPrice(budget)} ₽` : "Бюджет не указан"}</span>}
+              </div>
+            )}
+            {!timeAgo && budget && (
+              <div className="flex items-center gap-1">
+                <span>{budget ? `${formatPrice(budget)} ₽` : "Бюджет не указан"}</span>
               </div>
             )}
           </div>
         )}
-
-        {/* Кнопка "Предложить" в отдельном ряду */}
-        {!isOwner && (
-          <div className="mt-auto pt-3">
-            <Button 
-              asChild 
-              variant="outline" 
-              className="w-full"
-            >
-              <Link to={`/request/${id}${currentUserId ? '?focus=true' : ''}`}>
-                Предложить
-              </Link>
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
+    </Link>
   );
 };

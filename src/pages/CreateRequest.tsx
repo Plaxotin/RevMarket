@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Navbar } from "@/components/Navbar";
-import { ScrollButtons } from "@/components/ScrollButtons";
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ import { CATEGORIES } from "@/data/categories";
 import { checkAuth } from "@/utils/auth";
 import { ImageUpload } from "@/components/ImageUpload";
 import { CityCombobox } from "@/components/CityCombobox";
+import { translateSupabaseError } from "@/utils/errorMessages";
 
 const categories = CATEGORIES;
 
@@ -107,7 +107,7 @@ const CreateRequest = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось создать запрос: " + error.message,
+        description: "Не удалось создать запрос: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -122,10 +122,15 @@ const CreateRequest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container px-4 py-8 mx-auto">
-        <Card>
+    <div className="min-h-screen relative">
+      {/* Градиентный фон на весь сайт */}
+      <div className="fixed inset-0 z-0 bg-gradient-hero opacity-90" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))' }} />
+      
+      {/* Контент поверх градиента */}
+      <div className="relative z-10">
+        <Navbar />
+        <div className="container px-4 py-8 mx-auto">
+          <Card>
           <CardHeader>
             <CardTitle>Создать запрос</CardTitle>
             <CardDescription>
@@ -133,6 +138,11 @@ const CreateRequest = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Подсказка:</strong> Для автоматического заполнения полей Имя, Город, Email укажите их в личном кабинете.
+              </p>
+            </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="title">Заголовок *</Label>
@@ -221,6 +231,7 @@ const CreateRequest = () => {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

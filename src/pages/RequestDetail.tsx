@@ -17,6 +17,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import { translateSupabaseError } from "@/utils/errorMessages";
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -246,7 +247,7 @@ const RequestDetail = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось отправить предложение: " + error.message,
+        description: "Не удалось отправить предложение: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -301,7 +302,7 @@ const RequestDetail = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить запрос: " + error.message,
+        description: "Не удалось удалить запрос: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -335,7 +336,7 @@ const RequestDetail = () => {
     if (error) {
       toast({
         title: "Ошибка",
-        description: "Не удалось удалить предложение: " + error.message,
+        description: "Не удалось удалить предложение: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
     } else {
@@ -385,10 +386,16 @@ const RequestDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar onCityChange={() => {}} />
-        <div className="container px-4 py-16 mx-auto flex justify-center">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen relative">
+        {/* Градиентный фон на весь сайт */}
+        <div className="fixed inset-0 z-0 bg-gradient-hero opacity-90" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))' }} />
+        
+        {/* Контент поверх градиента */}
+        <div className="relative z-10">
+          <Navbar onCityChange={() => {}} />
+          <div className="container px-4 py-16 mx-auto flex justify-center">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
         </div>
       </div>
     );
@@ -396,20 +403,31 @@ const RequestDetail = () => {
 
   if (!request) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar onCityChange={() => {}} />
-        <div className="container px-4 py-12 mx-auto max-w-5xl text-center">
-          <h1 className="text-2xl font-bold mb-4">Запрос не найден</h1>
-          <Button onClick={() => navigate("/")}>Вернуться к каталогу</Button>
+      <div className="min-h-screen relative">
+        {/* Градиентный фон на весь сайт */}
+        <div className="fixed inset-0 z-0 bg-gradient-hero opacity-90" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))' }} />
+        
+        {/* Контент поверх градиента */}
+        <div className="relative z-10">
+          <Navbar onCityChange={() => {}} />
+          <div className="container px-4 py-12 mx-auto max-w-5xl text-center">
+            <h1 className="text-2xl font-bold mb-4">Запрос не найден</h1>
+            <Button onClick={() => navigate("/")}>Вернуться к каталогу</Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar onCityChange={() => {}} />
-      <div className="container px-4 py-12 mx-auto max-w-5xl">
+    <div className="min-h-screen relative">
+      {/* Градиентный фон на весь сайт */}
+      <div className="fixed inset-0 z-0 bg-gradient-hero opacity-90" style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))' }} />
+      
+      {/* Контент поверх градиента */}
+      <div className="relative z-10">
+        <Navbar onCityChange={() => {}} />
+        <div className="container px-4 py-12 mx-auto max-w-5xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card className="shadow-card animate-slide-up">
@@ -778,6 +796,7 @@ const RequestDetail = () => {
           </DialogContent>
         </Dialog>
       )}
+      </div>
     </div>
   );
 };
