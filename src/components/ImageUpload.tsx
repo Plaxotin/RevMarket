@@ -46,8 +46,6 @@ export const ImageUpload = ({
       return;
     }
 
-    setUploading(true);
-
     try {
       if (useSupabaseStorage()) {
         // Используем Supabase Storage в продакшене
@@ -58,6 +56,8 @@ export const ImageUpload = ({
           alert('Необходимо авторизоваться для загрузки изображений');
           return;
         }
+
+        setUploading(true);
 
         const uploadPromises = validFiles.map(async (file) => {
           const fileExt = file.name.split('.').pop();
@@ -83,6 +83,8 @@ export const ImageUpload = ({
         onImagesChange([...images, ...uploadedUrls]);
       } else {
         // Используем base64 в локальной разработке
+        setUploading(true);
+        
         const uploadPromises = validFiles.map(async (file) => {
           return new Promise<string>((resolve) => {
             const reader = new FileReader();

@@ -6,34 +6,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logout } from "@/utils/auth";
-import { HandshakeIcon } from "./HandshakeIcon";
+import { CITIES } from "@/data/cities";
 
-const cities = [
-  "Россия, все города",
-  "Москва",
-  "Санкт-Петербург",
-  "Новосибирск",
-  "Екатеринбург",
-  "Казань",
-  "Нижний Новгород",
-  "Челябинск",
-  "Самара",
-  "Омск",
-  "Ростов-на-Дону",
-  "Уфа",
-  "Красноярск",
-  "Воронеж",
-  "Пермь",
-  "Волгоград"
-];
-
-// Функция для получения короткого названия города для отображения в баре
-const getShortCityName = (city: string) => {
-  if (city === "Россия, все города") {
-    return "Россия";
-  }
-  return city;
-};
 
 interface NavbarProps {
   onCityChange?: (city: string) => void;
@@ -110,8 +84,44 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
             <span className="text-[1.32rem] font-bold text-white">РеверсМаркет</span>
           </Link>
           
-          {/* Мобильная версия - скрываем селектор города */}
+          {/* Мобильная версия - только иконки */}
           <div className="flex items-center gap-2 md:hidden">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                navigate("/");
+                if (onSearchOpen) {
+                  onSearchOpen();
+                }
+                setTimeout(() => {
+                  const catalogElement = document.getElementById("catalog");
+                  if (catalogElement) {
+                    catalogElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }, 100);
+              }}
+              className="p-2 text-white hover:bg-purple-600/30 w-10 h-10 justify-center"
+            >
+              <List className="w-5 h-5" />
+            </Button>
+            
+            <Select value={selectedCity} onValueChange={handleCityChange}>
+              <SelectTrigger className="h-10 w-12 px-2 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 justify-center">
+                <MapPin className="w-5 h-5" />
+              </SelectTrigger>
+              <SelectContent className="bg-black/60 backdrop-blur-md border-white/10 max-h-[70vh] overflow-y-auto">
+                {CITIES.map((city) => (
+                  <SelectItem 
+                    key={city} 
+                    value={city} 
+                    className="text-white focus:bg-blue-900/30 focus:text-blue-300"
+                  >
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             {user ? (
               <>
                 <Button variant="ghost" asChild className="p-2 text-white hover:bg-gray-700">
@@ -160,20 +170,24 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                   }
                 }, 100);
               }}
-              className="text-white hover:bg-purple-600/30"
+              className="text-white hover:bg-purple-600/30 w-10 justify-center lg:w-auto lg:justify-start lg:px-4"
             >
-              <List className="w-5 h-5" />
-              Поиск по каталогу
+              <List className="w-5 h-5 flex-shrink-0" />
+              <span className="hidden lg:inline ml-2">Поиск по каталогу</span>
             </Button>
             
             <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="w-[240px] h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30">
-                <MapPin className="w-4 h-4 mr-2" />
-                <span className="truncate">{getShortCityName(selectedCity)}</span>
+              <SelectTrigger className="h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 w-12 px-2 justify-center md:w-auto md:min-w-[180px] md:max-w-[300px] md:justify-start md:px-3">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden md:inline truncate ml-2">{selectedCity}</span>
               </SelectTrigger>
-              <SelectContent className="bg-black/60 backdrop-blur-md border-white/10">
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city} className="text-white focus:bg-blue-900/30 focus:text-blue-300">
+              <SelectContent className="bg-black/60 backdrop-blur-md border-white/10 max-h-[70vh] overflow-y-auto">
+                {CITIES.map((city) => (
+                  <SelectItem 
+                    key={city} 
+                    value={city} 
+                    className="text-white focus:bg-blue-900/30 focus:text-blue-300"
+                  >
                     {city}
                   </SelectItem>
                 ))}

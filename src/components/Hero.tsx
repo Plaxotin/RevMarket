@@ -20,24 +20,24 @@ export const Hero = () => {
                 Ищешь товар?
               </span>
               <br />
-              <span className="text-white animate-slide-up">
+              <span className="text-4xl md:text-6xl text-white animate-slide-up">
                 Размести запрос!
               </span>
             </h1>
           </div>
-          <div>
+          <div className="mt-8">
             <h2 className="text-5xl md:text-7xl font-black leading-tight text-right">
               <span className="bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
                 Продаешь товар?
               </span>
               <br />
-              <span className="text-white animate-slide-up">
+              <span className="text-4xl md:text-6xl text-white animate-slide-up">
                 Найди покупателя!
               </span>
             </h2>
           </div>
           <div className="mt-16">
-            <p className="text-xl md:text-2xl text-blue-100 leading-relaxed animate-fade-in text-center">
+            <p className="text-base md:text-2xl text-blue-100 leading-relaxed animate-fade-in text-center">
               Маркетплейс, где покупатели публикуют свои желания, а продавцы оставляют лучшие предложения
             </p>
           </div>

@@ -25,27 +25,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { CITIES } from "@/data/cities";
 
 const categories = CATEGORIES;
-
-const cities = [
-  "Россия, все города",
-  "Москва",
-  "Санкт-Петербург",
-  "Новосибирск",
-  "Екатеринбург",
-  "Казань",
-  "Нижний Новгород",
-  "Челябинск",
-  "Самара",
-  "Омск",
-  "Ростов-на-Дону",
-  "Уфа",
-  "Красноярск",
-  "Воронеж",
-  "Пермь",
-  "Волгоград"
-];
 
 const AuthCreateRequest = () => {
   const navigate = useNavigate();
@@ -162,44 +144,21 @@ const AuthCreateRequest = () => {
         return;
       }
 
-      // Проверяем, существует ли профиль, и создаем его автоматически, если нужно
-      try {
-        const { data: existingProfile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", data.user?.id)
-          .single();
-        
-        if (!existingProfile) {
-          // Создаем профиль автоматически если его нет
-          const { error: insertError } = await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: data.user?.id,
-                name: "Пользователь",
-                phone: phone,
-                email: null,
-                city: requestData.city || null,
-              },
-            ]);
-          
-          if (insertError) {
-            console.warn("Could not create profile:", insertError);
-          }
-        } else if (requestData.city) {
-          // Обновляем город в профиле, если он указан
+      // Profile creation is handled by the backend handle_new_user trigger
+      // If city needs to be updated, do it after authentication
+      if (data.user && requestData.city) {
+        try {
           const { error: updateError } = await supabase
             .from("profiles")
             .update({ city: requestData.city })
-            .eq("id", data.user?.id);
+            .eq("id", data.user.id);
           
           if (updateError) {
             console.warn("Could not update profile city:", updateError);
           }
+        } catch (error) {
+          console.error("Error updating profile city:", error);
         }
-      } catch (error) {
-        console.error("Error handling profile:", error);
       }
 
       // Проверяем, что пользователь авторизован
@@ -448,7 +407,7 @@ const AuthCreateRequest = () => {
                         <SelectValue placeholder="Выберите город" />
                       </SelectTrigger>
                       <SelectContent>
-                        {cities.map((city) => (
+                        {CITIES.map((city) => (
                           <SelectItem key={city} value={city}>
                             {city}
                           </SelectItem>

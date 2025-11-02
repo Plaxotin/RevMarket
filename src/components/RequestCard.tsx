@@ -279,7 +279,11 @@ export const RequestCard = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleFavorite}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              e.preventDefault();
+              toggleFavorite();
+            }}
             disabled={isLoading}
             className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-white/80 z-20"
             title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}

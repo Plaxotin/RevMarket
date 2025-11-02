@@ -127,9 +127,8 @@ const Index = () => {
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
                 Актуальные запросы
               </h2>
-              <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-                Покупатели ищут эти товары и услуги прямо сейчас. 
-                Будьте первым, кто оставит предложение!
+              <p className="text-base md:text-sm text-gray-300 max-w-3xl mx-auto md:whitespace-nowrap">
+                Покупатели ищут эти товары и услуги прямо сейчас. Будьте первым, кто оставит предложение!
               </p>
             </div>
             
@@ -137,7 +136,7 @@ const Index = () => {
             <div className="md:hidden mb-8 animate-fade-in">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
+                  <Button variant="outline" className="w-full justify-between bg-gray-600/20 hover:bg-gray-600/20 text-white">
                     <div className="flex items-center gap-2">
                       <Filter className="w-4 h-4" />
                       <span>Фильтры: {selectedCategory}</span>
@@ -145,12 +144,12 @@ const Index = () => {
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full">
+                <DropdownMenuContent className="w-full bg-black/50 backdrop-blur-md max-h-[70vh] overflow-y-auto">
                   {categories.map((category) => (
                     <DropdownMenuItem
                       key={category}
                       onClick={() => setSelectedCategory(category)}
-                      className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
+                      className={selectedCategory === category ? "bg-gray-500/50 text-white" : "text-white"}
                     >
                       {category}
                     </DropdownMenuItem>
@@ -165,7 +164,7 @@ const Index = () => {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`text-xs py-1 px-3 rounded-md outline-none focus:outline-none ${selectedCategory === category ? "bg-gradient-to-r from-blue-800 to-pink-800 border-0 text-white hover:from-blue-800 hover:to-pink-800 hover:text-white" : "bg-transparent border border-gray-600 text-white hover:bg-gray-600/20"}`}
+                  className={`text-xs py-1 px-3 rounded-md outline-none focus:outline-none ${selectedCategory === category ? "bg-gray-500/50 border-0 text-white hover:bg-gray-500/50" : "bg-transparent border border-gray-600 text-white hover:bg-gray-600/20"}`}
                 >
                   {category}
                 </button>
@@ -203,7 +202,12 @@ const Index = () => {
                 <div className="h-32"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div 
+                className="grid gap-6"
+                style={{
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'
+                }}
+              >
                 {filteredRequests.map((request, index) => (
                   <div 
                     key={request.id} 

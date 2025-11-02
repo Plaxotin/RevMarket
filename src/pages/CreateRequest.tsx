@@ -128,9 +128,9 @@ const CreateRequest = () => {
       
       {/* Контент поверх градиента */}
       <div className="relative z-10">
-        <Navbar />
-        <div className="container px-4 py-8 mx-auto">
-          <Card>
+      <Navbar />
+      <div className="container px-4 py-8 mx-auto">
+        <Card>
           <CardHeader>
             <CardTitle>Создать запрос</CardTitle>
             <CardDescription>
@@ -138,11 +138,6 @@ const CreateRequest = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-              <p className="text-sm text-blue-800">
-                <strong>💡 Подсказка:</strong> Для автоматического заполнения полей Имя, Город, Email укажите их в личном кабинете.
-              </p>
-            </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="title">Заголовок *</Label>

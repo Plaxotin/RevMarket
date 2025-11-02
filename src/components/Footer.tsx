@@ -4,64 +4,16 @@ export const Footer = () => {
   return (
     <footer className="relative z-20 bg-black/60 backdrop-blur-md border-t border-white/10">
       <div className="container px-4 py-6 mx-auto text-white">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="flex flex-col items-start">
           {/* Брендинг и описание */}
-          <div>
-            <Link to="/" className="flex items-center gap-3 mb-4">
+          <div className="mb-6">
+            <Link to="/" className="flex items-center gap-3">
               <span className="font-bold text-xl">РеверсМаркет</span>
             </Link>
           </div>
 
-          {/* Быстрые ссылки */}
-          <div>
-            <h3 className="font-bold mb-4">Быстрые ссылки</h3>
-            <ul className="space-y-2">
-              <li>
-                <a 
-                  href="#catalog" 
-                  className="text-sm hover:text-gray-300 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const catalogElement = document.getElementById("catalog");
-                    if (catalogElement) {
-                      catalogElement.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }
-                  }}
-                >
-                  Каталог запросов
-                </a>
-              </li>
-              <li>
-                <Link to="/create-request" className="text-sm hover:text-gray-300 transition-colors">
-                  Создать запрос
-                </Link>
-              </li>
-              <li>
-                <a 
-                  href="#how-it-works" 
-                  className="text-sm hover:text-gray-300 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const howItWorksElement = document.getElementById("how-it-works");
-                    if (howItWorksElement) {
-                      howItWorksElement.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }
-                  }}
-                >
-                  Как это работает
-                </a>
-              </li>
-              <li>
-                <Link to="/profile" className="text-sm hover:text-gray-300 transition-colors">
-                  Личный кабинет
-                </Link>
-              </li>
-            </ul>
-          </div>
-
           {/* Полезная информация */}
-          <div>
-            <h3 className="font-bold mb-4">Полезная информация</h3>
+          <div className="w-full">
             <ul className="space-y-2">
               <li>
                 <a href="#about" className="text-sm hover:text-gray-300 transition-colors">

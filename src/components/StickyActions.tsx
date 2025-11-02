@@ -72,7 +72,7 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   return (
     <div className="sticky top-16 z-40 bg-background/20 backdrop-blur-md border-b border-border/40 shadow-lg">
       <div className="container px-4 py-2 mx-auto">
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-[1rem] justify-center items-center">
           <Button 
             variant="hero" 
             size="lg" 

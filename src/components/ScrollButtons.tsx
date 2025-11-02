@@ -59,7 +59,7 @@ export const ScrollButtons = () => {
         size="icon"
         className={cn(
           "h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all opacity-65",
-          "bg-primary hover:bg-primary/90"
+          "bg-gray-500 hover:bg-gray-600"
         )}
         aria-label="Вверх"
       >
@@ -71,7 +71,7 @@ export const ScrollButtons = () => {
         size="icon"
         className={cn(
           "h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all opacity-65",
-          "bg-primary hover:bg-primary/90",
+          "bg-gray-500 hover:bg-gray-600",
           isAtBottom && "opacity-10 cursor-not-allowed"
         )}
         disabled={isAtBottom}
