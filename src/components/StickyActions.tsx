@@ -2,16 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Search, X, FilePlus } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { checkAuth } from "@/utils/auth";
 
 interface StickyActionsProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSearchOpen?: () => void;
   triggerSearchOpen?: number;
+  onCreateRequest?: () => void;
 }
 
-export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, triggerSearchOpen }: StickyActionsProps) => {
+export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, triggerSearchOpen, onCreateRequest }: StickyActionsProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -53,19 +53,13 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   }, [isSearchOpen]);
 
   const handleCloseSearch = () => {
-    setIsSearchOpen(false);
-    // Don't clear the search query, keep it for potential future search
+    onSearchChange(''); // Сначала очищаем поисковый запрос
+    setIsSearchOpen(false); // Затем закрываем поиск
   };
 
-  const handleCreateRequestClick = async () => {
-    const { isAuthenticated } = await checkAuth();
-    
-    if (isAuthenticated) {
-      // Если пользователь авторизован, переходим на страницу создания запроса
-      window.location.href = "/create-request";
-    } else {
-      // Если не авторизован, переходим на страницу регистрации с созданием запроса
-      window.location.href = "/auth-create-request";
+  const handleCreateRequestClick = () => {
+    if (onCreateRequest) {
+      onCreateRequest();
     }
   };
 
@@ -108,9 +102,9 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
                 variant="ghost"
                 size="icon"
                 onClick={handleCloseSearch}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-pink-500/20"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 text-pink-500" />
               </Button>
             </div>
           )}

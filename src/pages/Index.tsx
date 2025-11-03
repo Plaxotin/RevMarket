@@ -4,6 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { StickyActions } from "@/components/StickyActions";
 import { Footer } from "@/components/Footer";
 import { ScrollButtons } from "@/components/ScrollButtons";
+import { CreateRequestDialog } from "@/components/CreateRequestDialog";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +12,6 @@ import { Loader2, Filter, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FILTER_CATEGORIES } from "@/data/categories";
 import { checkAuth } from "@/utils/auth";
-import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +35,6 @@ const getTimeAgo = (dateString: string) => {
 
 const Index = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>("Все");
   const [selectedCity, setSelectedCity] = useState<string>("Россия, все города");
   const [requests, setRequests] = useState<any[]>([]);
@@ -43,11 +42,16 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchOpenTrigger, setSearchOpenTrigger] = useState(0);
+  const [createRequestDialogOpen, setCreateRequestDialogOpen] = useState(false);
   
   const categories = FILTER_CATEGORIES;
   
   const handleOpenSearch = () => {
     setSearchOpenTrigger(prev => prev + 1);
+  };
+
+  const handleOpenCreateRequest = () => {
+    setCreateRequestDialogOpen(true);
   };
 
   useEffect(() => {
@@ -60,16 +64,8 @@ const Index = () => {
     setCurrentUser(user);
   };
 
-  const handleCreateFirstRequest = async () => {
-    const { isAuthenticated } = await checkAuth();
-    
-    if (isAuthenticated) {
-      // Если пользователь авторизован, переходим на страницу создания запроса
-      navigate("/create-request");
-    } else {
-      // Если не авторизован, переходим на страницу регистрации с созданием запроса
-      navigate("/auth-create-request");
-    }
+  const handleCreateFirstRequest = () => {
+    setCreateRequestDialogOpen(true);
   };
 
   const loadRequests = async () => {
@@ -116,18 +112,34 @@ const Index = () => {
       
       {/* Контент поверх градиента */}
       <div className="relative z-10">
-        <Navbar onCityChange={setSelectedCity} onSearchOpen={handleOpenSearch} />
+        <Navbar 
+          onCityChange={setSelectedCity} 
+          onSearchOpen={handleOpenSearch}
+          onCreateRequest={handleOpenCreateRequest}
+        />
         <Hero />
-        <StickyActions searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchOpen={handleOpenSearch} triggerSearchOpen={searchOpenTrigger} />
+        <StickyActions 
+          searchQuery={searchQuery} 
+          onSearchChange={setSearchQuery} 
+          onSearchOpen={handleOpenSearch} 
+          triggerSearchOpen={searchOpenTrigger}
+          onCreateRequest={handleOpenCreateRequest}
+        />
+        
+        <CreateRequestDialog 
+          open={createRequestDialogOpen}
+          onOpenChange={setCreateRequestDialogOpen}
+          onSuccess={loadRequests}
+        />
         
         <section id="catalog" className="w-full scroll-mt-[120px] relative z-20">
         <div className="bg-black/60 backdrop-blur-md rounded-[40px] mt-8 pt-12 pb-16 mx-3 mb-4">
           <div className="container px-4 mx-auto">
-            <div className="mb-12 text-center animate-fade-in">
+            <div className="mb-12 text-center animate-fade-in select-none">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
                 Актуальные запросы
               </h2>
-              <p className="text-base md:text-sm text-gray-300 max-w-3xl mx-auto md:whitespace-nowrap">
+              <p className="text-base md:text-sm text-gray-300 max-w-3xl mx-auto">
                 Покупатели ищут эти товары и услуги прямо сейчас. Будьте первым, кто оставит предложение!
               </p>
             </div>

@@ -12,9 +12,10 @@ import { CITIES } from "@/data/cities";
 interface NavbarProps {
   onCityChange?: (city: string) => void;
   onSearchOpen?: () => void;
+  onCreateRequest?: () => void;
 }
 
-export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
+export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarProps) => {
   const [selectedCity, setSelectedCity] = useState<string>("Россия, все города");
   const [user, setUser] = useState<any>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -129,10 +130,12 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                     <User className="w-5 h-5" />
                   </Link>
                 </Button>
-                <Button variant="default" asChild className="px-3 bg-gray-700 hover:bg-gray-600 text-white">
-                  <Link to="/create-request">
-                    <span className="text-sm">Создать</span>
-                  </Link>
+                <Button 
+                  variant="default" 
+                  onClick={() => onCreateRequest && onCreateRequest()}
+                  className="px-3 bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  <span className="text-sm">Создать</span>
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -202,10 +205,12 @@ export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
                     Личный кабинет
                   </Link>
                 </Button>
-                <Button variant="default" asChild className="bg-gray-700 hover:bg-gray-600 text-white">
-                  <Link to="/create-request">
-                    Создать запрос
-                  </Link>
+                <Button 
+                  variant="default" 
+                  onClick={() => onCreateRequest && onCreateRequest()}
+                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  Создать запрос
                 </Button>
                 <Button 
                   variant="ghost" 

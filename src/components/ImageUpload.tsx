@@ -17,13 +17,15 @@ interface ImageUploadProps {
   onImagesChange: (images: string[]) => void;
   maxImages?: number;
   className?: string;
+  variant?: 'default' | 'transparent';
 }
 
 export const ImageUpload = ({ 
   images, 
   onImagesChange, 
   maxImages = 5, 
-  className = "" 
+  className = "",
+  variant = 'default'
 }: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,11 +118,15 @@ export const ImageUpload = ({
     fileInputRef.current?.click();
   };
 
+  const isTransparent = variant === 'transparent';
+
   return (
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Изображения</label>
-        <span className="text-xs text-muted-foreground">
+        <label className={`text-sm font-medium ${isTransparent ? 'text-white' : ''}`}>
+          Изображения
+        </label>
+        <span className={`text-xs ${isTransparent ? 'text-white/70' : 'text-muted-foreground'}`}>
           {images.length}/{maxImages}
         </span>
       </div>
@@ -129,7 +135,7 @@ export const ImageUpload = ({
       {images.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((url, index) => (
-            <Card key={index} className="relative group">
+            <Card key={index} className={`relative group ${isTransparent ? 'bg-white/10 border-white/20' : ''}`}>
               <CardContent className="p-2">
                 <img
                   src={url}
@@ -167,7 +173,11 @@ export const ImageUpload = ({
             variant="outline"
             onClick={openFileDialog}
             disabled={uploading}
-            className="w-full h-24 border-dashed border-2 hover:bg-blue-500/20 hover:text-foreground transition-colors"
+            className={`w-full h-24 border-dashed border-2 transition-colors ${
+              isTransparent 
+                ? 'bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/50' 
+                : 'hover:bg-blue-500/20 hover:text-foreground'
+            }`}
           >
             <div className="flex flex-col items-center gap-2">
               {uploading ? (
@@ -188,10 +198,10 @@ export const ImageUpload = ({
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
+      <p className={`text-xs ${isTransparent ? 'text-white/70' : 'text-muted-foreground'}`}>
         Поддерживаются форматы: JPG, PNG, GIF. Максимум {maxImages} изображений, до 5MB каждое.
         {!useSupabaseStorage() && (
-          <span className="block text-yellow-600 font-medium">
+          <span className={`block font-medium ${isTransparent ? 'text-yellow-300' : 'text-yellow-600'}`}>
             ⚠️ Локальный режим: изображения сохраняются в base64
           </span>
         )}
