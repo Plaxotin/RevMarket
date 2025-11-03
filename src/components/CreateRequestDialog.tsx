@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,12 +58,23 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
   });
   const [images, setImages] = useState<string[]>([]);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (open) {
       loadUser();
     }
   }, [open]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const loadUser = async () => {
     const { user: currentUser, isAuthenticated } = await checkAuth();
@@ -87,6 +98,12 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
   };
 
   const resetForm = () => {
+    // Clear countdown timer if it's running
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    
     setAuthStep('phone');
     setPhone("");
     setSmsCode("");
@@ -302,11 +319,19 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
   };
 
   const startCountdown = () => {
+    // Clear any existing timer before starting a new one
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+    }
+    
     setCountdown(60);
-    const timer = setInterval(() => {
+    countdownTimerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+          }
           return 0;
         }
         return prev - 1;
