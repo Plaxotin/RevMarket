@@ -76,6 +76,14 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
     }
   };
 
+  const handleCreateRequest = () => {
+    if (onCreateRequest) {
+      onCreateRequest();
+    } else {
+      navigate("/create-request");
+    }
+  };
+
   return (
     <nav className="sticky top-0 z-50 bg-black/60 backdrop-blur-md border-b border-white/10">
       <div className="container px-4 mx-auto">
@@ -132,7 +140,7 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
                 </Button>
                 <Button 
                   variant="default" 
-                  onClick={() => onCreateRequest && onCreateRequest()}
+                  onClick={handleCreateRequest}
                   className="px-3 bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   <span className="text-sm">Создать</span>
@@ -207,7 +215,7 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
                 </Button>
                 <Button 
                   variant="default" 
-                  onClick={() => onCreateRequest && onCreateRequest()}
+                  onClick={handleCreateRequest}
                   className="bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   Создать запрос

@@ -210,7 +210,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
           description: "Проверьте правильность введенного кода",
           variant: "destructive",
         });
-        setLoading(false);
         return;
       }
 
@@ -237,7 +236,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
           description: "Пользователь не авторизован",
           variant: "destructive",
         });
-        setLoading(false);
         return;
       }
 
@@ -267,39 +265,48 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
 
     setLoading(true);
 
-    const { error } = await supabase
-      .from("requests")
-      .insert([
-        {
-          user_id: userId,
-          title: requestData.title,
-          description: requestData.description,
-          category: requestData.category,
-          budget: requestData.budget || null,
-          city: requestData.city || null,
-          images: images.length > 0 ? images : null,
-        },
-      ]);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .insert([
+          {
+            user_id: userId,
+            title: requestData.title,
+            description: requestData.description,
+            category: requestData.category,
+            budget: requestData.budget || null,
+            city: requestData.city || null,
+            images: images.length > 0 ? images : null,
+          },
+        ]);
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось создать запрос: " + translateSupabaseError(error.message),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Успешно!",
+          description: "Запрос успешно создан",
+        });
+        resetForm();
+        onOpenChange(false);
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error: any) {
+      console.error("Ошибка при создании запроса:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось создать запрос: " + translateSupabaseError(error.message),
+        description: "Произошла ошибка: " + translateSupabaseError(error.message || "Неизвестная ошибка"),
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Успешно!",
-        description: "Запрос успешно создан",
-      });
-      resetForm();
-      onOpenChange(false);
-      if (onSuccess) {
-        onSuccess();
-      }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

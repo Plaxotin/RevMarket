@@ -48,7 +48,7 @@ export const Hero = () => {
             </h2>
           </div>
           <div className="mt-16">
-            <p className="text-xs md:text-lg text-blue-100 leading-relaxed animate-fade-in text-center">
+            <p className="text-sm md:text-lg text-blue-100 leading-relaxed animate-fade-in text-center">
               Маркетплейс, где покупатели публикуют свои желания, а продавцы оставляют лучшие предложения
             </p>
           </div>
