@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, X, FilePlus } from "lucide-react";
+import { Search, X, CirclePlus } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 interface StickyActionsProps {
@@ -17,10 +17,10 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   
   // Watch for trigger to open search from Navbar
   useEffect(() => {
-    if (triggerSearchOpen && triggerSearchOpen > 0 && !isSearchOpen) {
+    if (triggerSearchOpen && triggerSearchOpen > 0) {
       setIsSearchOpen(true);
     }
-  }, [triggerSearchOpen, isSearchOpen]);
+  }, [triggerSearchOpen]);
 
   const handleSearchClick = () => {
     // Scroll to catalog first
@@ -73,8 +73,8 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
             className="group shadow-lg w-full sm:w-[240px]"
             onClick={handleCreateRequestClick}
           >
-            <FilePlus className="w-[22px] h-[22px]" />
             Ищу товар
+            <CirclePlus className="w-[20px] h-[20px] ml-2" />
           </Button>
           
           {!isSearchOpen ? (
@@ -84,8 +84,8 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
               onClick={handleSearchClick}
               className="group shadow-lg w-full sm:w-[240px]"
             >
-              <Search className="w-5 h-5" />
               Ищу покупателя
+              <Search className="w-5 h-5 ml-2" />
             </Button>
           ) : (
             <div className="relative w-full sm:w-96">

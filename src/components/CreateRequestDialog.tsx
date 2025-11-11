@@ -32,6 +32,7 @@ import {
 import { CITIES } from "@/data/cities";
 import { checkAuth } from "@/utils/auth";
 import { CityCombobox } from "@/components/CityCombobox";
+import { formatPrice } from "@/lib/utils";
 
 const categories = CATEGORIES;
 
@@ -39,9 +40,10 @@ interface CreateRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  initialCity?: string;
 }
 
-export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateRequestDialogProps) => {
+export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity }: CreateRequestDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -59,12 +61,40 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
   const [images, setImages] = useState<string[]>([]);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [cityTouched, setCityTouched] = useState(false);
+
+  const formatBudgetDisplay = (value: string) => {
+    if (!value) return "";
+    return formatPrice(value);
+  };
+
+  const handleBudgetChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setRequestData((prev) => ({
+      ...prev,
+      budget: digitsOnly,
+    }));
+  };
 
   useEffect(() => {
     if (open) {
       loadUser();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (
+      open &&
+      initialCity &&
+      initialCity !== "Россия, все города" &&
+      !cityTouched
+    ) {
+      setRequestData((prev) => ({
+        ...prev,
+        city: initialCity,
+      }));
+    }
+  }, [open, initialCity, cityTouched]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -75,6 +105,14 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (open && !user) {
+      setHowItWorksOpen(true);
+    } else {
+      setHowItWorksOpen(false);
+    }
+  }, [open, user]);
 
   const loadUser = async () => {
     const { user: currentUser, isAuthenticated } = await checkAuth();
@@ -116,19 +154,21 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
       city: "",
     });
     setImages([]);
+    setHowItWorksOpen(false);
+    setCityTouched(false);
   };
 
   // Функция для отправки SMS кода
   const sendSMSCode = async (phoneNumber: string) => {
     const isTitleEmpty = !requestData.title || requestData.title.trim() === '';
-    const isDescriptionEmpty = !requestData.description || requestData.description.trim() === '';
     const isCategoryEmpty = !requestData.category || requestData.category.trim() === '';
+    const isCityEmpty = !requestData.city || requestData.city.trim() === '';
 
-    if (isTitleEmpty || isDescriptionEmpty || isCategoryEmpty) {
+    if (isTitleEmpty || isCategoryEmpty || isCityEmpty) {
       let missingFields = [];
       if (isTitleEmpty) missingFields.push("Название");
-      if (isDescriptionEmpty) missingFields.push("Описание");
       if (isCategoryEmpty) missingFields.push("Категория");
+      if (isCityEmpty) missingFields.push("Город");
       
       toast({
         title: "Ошибка",
@@ -254,7 +294,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
 
   // Создание запроса для авторизованного пользователя
   const createRequest = async (userId: string) => {
-    if (!requestData.title || !requestData.description || !requestData.category) {
+    if (!requestData.title || !requestData.category || !requestData.city) {
       toast({
         title: "Ошибка",
         description: "Пожалуйста, заполните все обязательные поля",
@@ -436,7 +476,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-white">Описание *</Label>
+            <Label htmlFor="description" className="text-white">Описание</Label>
             <Textarea
               id="description"
               placeholder="Подробно опишите, что вам нужно..."
@@ -458,7 +498,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
                 <SelectTrigger id="category" className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Выберите категорию" />
                 </SelectTrigger>
-                <SelectContent className="bg-black/90 backdrop-blur-xl border-white/20">
+                <SelectContent className="bg-black/40 backdrop-blur-xl border-white/10">
                   {categories.map((category) => (
                     <SelectItem key={category} value={category} className="text-white focus:bg-white/20 focus:text-white">
                       {category}
@@ -469,37 +509,49 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess }: CreateReq
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="budget" className="text-white">Бюджет</Label>
-              <Input
-                id="budget"
-                placeholder="Например: 50 000 - 70 000 ₽"
-                value={requestData.budget}
-                onChange={(e) => setRequestData({ ...requestData, budget: e.target.value })}
-                disabled={authStep === 'code'}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-              />
+              <Label htmlFor="budget" className="text-white">Ваш бюджет</Label>
+              <div className="relative">
+                <Input
+                  id="budget"
+                  inputMode="numeric"
+                  placeholder="Например: 50 000"
+                  value={formatBudgetDisplay(requestData.budget)}
+                  onChange={(e) => handleBudgetChange(e.target.value)}
+                  disabled={authStep === 'code'}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-12"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400 text-base">
+                  ₽
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="city" className="text-white">Город</Label>
+              <Label htmlFor="city" className="text-white">Город *</Label>
               {user ? (
                 <CityCombobox
                   value={requestData.city}
-                  onChange={(value) => setRequestData({ ...requestData, city: value })}
+                  onChange={(value) => {
+                    setCityTouched(true);
+                    setRequestData({ ...requestData, city: value });
+                  }}
                   placeholder="Выберите или введите город"
                 />
               ) : (
                 <Select
                   value={requestData.city}
-                  onValueChange={(value) => setRequestData({ ...requestData, city: value })}
+                  onValueChange={(value) => {
+                    setCityTouched(true);
+                    setRequestData({ ...requestData, city: value });
+                  }}
                   disabled={authStep === 'code'}
                 >
                   <SelectTrigger id="city" className="bg-white/10 border-white/20 text-white">
                     <SelectValue placeholder="Выберите город" />
                   </SelectTrigger>
-                  <SelectContent className="bg-black/90 backdrop-blur-xl border-white/20">
+                  <SelectContent className="bg-black/40 backdrop-blur-xl border-white/10">
                     {CITIES.map((city) => (
                       <SelectItem key={city} value={city} className="text-white focus:bg-white/20 focus:text-white">
                         {city}

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logout } from "@/utils/auth";
 import { CITIES } from "@/data/cities";
+import LogoReversMarket from "../../Clip path group.svg";
 
 
 interface NavbarProps {
@@ -89,8 +90,12 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-between h-16">
           {/* Logo - всегда видимый */}
-          <Link to="/" className="flex items-center gap-3 flex-shrink-0">
-            <span className="text-[1.32rem] font-bold text-white">РеверсМаркет</span>
+          <Link to="/" className="flex h-full items-center gap-3 flex-shrink-0">
+            <img
+              src={LogoReversMarket}
+              alt="РеверсМаркет"
+              className="h-[70%] w-auto object-contain"
+            />
           </Link>
           
           {/* Мобильная версия - только иконки */}
@@ -188,9 +193,11 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
             </Button>
             
             <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 w-12 px-2 justify-center md:w-auto md:min-w-[180px] md:max-w-[300px] md:justify-start md:px-3">
+              <SelectTrigger className="h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 w-12 px-2 justify-between gap-2 md:w-[220px] md:px-3">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden md:inline truncate ml-2">{selectedCity}</span>
+                <span className="hidden md:flex flex-1 items-center justify-center text-center truncate px-1">
+                  {selectedCity}
+                </span>
               </SelectTrigger>
               <SelectContent className="bg-black/60 backdrop-blur-md border-white/10 max-h-[70vh] overflow-y-auto">
                 {CITIES.map((city) => (

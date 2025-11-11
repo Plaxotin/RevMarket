@@ -130,6 +130,7 @@ const Index = () => {
           open={createRequestDialogOpen}
           onOpenChange={setCreateRequestDialogOpen}
           onSuccess={loadRequests}
+          initialCity={selectedCity}
         />
         
         <section id="catalog" className="w-full scroll-mt-[120px] relative z-20">

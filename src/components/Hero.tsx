@@ -13,6 +13,42 @@ export const Hero = () => {
         }}
       />
       
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div
+          className="hero-orb hero-orb-blue animate-orb"
+          style={{
+            top: '-4%',
+            left: '-3%',
+            width: '280px',
+            height: '280px',
+            animationDelay: '0s',
+            animationDuration: '22s',
+          }}
+        />
+        <div
+          className="hero-orb hero-orb-pink animate-orb"
+          style={{
+            bottom: '-10%',
+            right: '-4%',
+            width: '320px',
+            height: '320px',
+            animationDelay: '6s',
+            animationDuration: '26s',
+          }}
+        />
+        <div
+          className="hero-orb hero-orb-purple animate-orb"
+          style={{
+            top: '25%',
+            left: '42%',
+            width: '220px',
+            height: '220px',
+            animationDelay: '3s',
+            animationDuration: '18s',
+          }}
+        />
+      </div>
+      
       <div className="container relative z-10 px-4 pt-8 pb-8 mx-auto">
         <div className="max-w-5xl mx-auto animate-slide-up">
           {/* Слоган */}
