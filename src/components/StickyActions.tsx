@@ -64,13 +64,13 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   };
 
   return (
-    <div className="sticky top-16 z-40 bg-background/20 backdrop-blur-md border-b border-border/40 shadow-lg">
-      <div className="container px-4 py-2 mx-auto">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-[1rem] justify-center items-center">
+    <div className="sticky top-[3.9rem] z-40 bg-background/20 backdrop-blur-md border-b border-border/40 shadow-lg">
+      <div className="container px-6 py-3 mx-auto max-w-5xl">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch">
           <Button 
             variant="hero" 
             size="lg" 
-            className="group shadow-lg w-full sm:w-[240px]"
+            className="group shadow-lg w-full sm:w-auto sm:min-w-[200px]"
             onClick={handleCreateRequestClick}
           >
             Ищу товар
@@ -82,7 +82,7 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
               variant="hero-sell" 
               size="lg"
               onClick={handleSearchClick}
-              className="group shadow-lg w-full sm:w-[240px]"
+              className="group shadow-lg w-full sm:w-auto sm:min-w-[200px]"
             >
               Ищу покупателя
               <Search className="w-5 h-5 ml-2" />

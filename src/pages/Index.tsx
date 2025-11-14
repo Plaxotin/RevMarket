@@ -134,7 +134,7 @@ const Index = () => {
         />
         
         <section id="catalog" className="w-full scroll-mt-[120px] relative z-20">
-        <div className="bg-black/60 backdrop-blur-md rounded-[40px] mt-8 pt-12 pb-16 mx-3 mb-4">
+        <div className="bg-black/60 backdrop-blur-md rounded-[40px] mt-8 pt-12 pb-4 mx-3 mb-4">
           <div className="container px-4 mx-auto">
             <div className="mb-12 text-center animate-fade-in select-none">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">

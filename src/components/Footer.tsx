@@ -1,44 +1,31 @@
 import { Link } from "react-router-dom";
-import LogoReversMarket from "../../Clip path group.svg";
+import RevMarketLogo from "../../revMarketLogo3.svg";
 
 export const Footer = () => {
   return (
     <footer className="relative z-20 bg-black/60 backdrop-blur-md border-t border-white/10">
       <div className="container px-4 py-6 mx-auto text-white">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex flex-col items-center md:items-start gap-6 text-center md:text-left">
-            {/* Полезная информация */}
-            <div>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#about" className="text-sm hover:text-gray-300 transition-colors">
-                    О нас
-                  </a>
-                </li>
-                <li>
-                  <a href="#faq" className="text-sm hover:text-gray-300 transition-colors">
-                    Часто задаваемые вопросы
-                  </a>
-                </li>
-                <li>
-                  <a href="#contacts" className="text-sm hover:text-gray-300 transition-colors">
-                    Контакты
-                  </a>
-                </li>
-                <li>
-                  <a href="#help" className="text-sm hover:text-gray-300 transition-colors">
-                    Помощь
-                  </a>
-                </li>
-              </ul>
-            </div>
+        <div className="flex flex-col md:flex-row items-start justify-between gap-10">
+          <div className="flex flex-col gap-3 text-sm w-full md:w-auto text-left">
+            <a href="#about" className="hover:text-gray-300 transition-colors">
+              О нас
+            </a>
+            <a href="#faq" className="hover:text-gray-300 transition-colors">
+              Часто задаваемые вопросы
+            </a>
+            <a href="#contacts" className="hover:text-gray-300 transition-colors">
+              Контакты
+            </a>
+            <a href="#help" className="hover:text-gray-300 transition-colors">
+              Помощь
+            </a>
           </div>
 
-          <div className="flex justify-center md:justify-center md:items-center">
+          <div className="flex justify-center md:justify-end items-center w-full md:w-auto -mt-8 md:-mt-[30px]">
             <img
-              src={LogoReversMarket}
+              src={RevMarketLogo}
               alt="РеверсМаркет"
-              className="h-24 w-auto object-contain select-none"
+              className="h-40 w-auto object-contain select-none brightness-40 self-center"
             />
           </div>
         </div>
