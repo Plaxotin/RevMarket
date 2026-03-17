@@ -68,26 +68,54 @@ const Index = () => {
     setCreateRequestDialogOpen(true);
   };
 
-  const loadRequests = async () => {
+  const loadRequests = async (retryCount = 0) => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("requests")
-      .select(`
-        *,
-        profiles!requests_user_id_fkey (
-          name
-        )
-      `)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("requests")
+        .select(`
+          *,
+          profiles!requests_user_id_fkey (
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
 
-    if (error) {
+      if (error) {
+        console.error("Supabase error:", error.message, error.code);
+
+        // Retry once on connection/timeout errors (e.g. paused project waking up)
+        if (retryCount < 2 && (error.message.includes("fetch") || error.code === "PGRST301")) {
+          console.log(`Retrying loadRequests (attempt ${retryCount + 1})...`);
+          setTimeout(() => loadRequests(retryCount + 1), 2000);
+          return;
+        }
+
+        toast({
+          title: "Ошибка загрузки",
+          description:
+            error.message.includes("fetch") || error.message.includes("network")
+              ? "Сервер временно недоступен. Возможно, база данных в режиме сна — попробуйте через минуту."
+              : `Не удалось загрузить запросы: ${error.message}`,
+          variant: "destructive",
+        });
+      } else {
+        setRequests(data || []);
+      }
+    } catch (e) {
+      console.error("Network error loading requests:", e);
+
+      if (retryCount < 2) {
+        console.log(`Retrying loadRequests after catch (attempt ${retryCount + 1})...`);
+        setTimeout(() => loadRequests(retryCount + 1), 2000);
+        return;
+      }
+
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить запросы",
+        title: "Ошибка соединения",
+        description: "Не удалось подключиться к серверу. Проверьте интернет-соединение или попробуйте позже.",
         variant: "destructive",
       });
-    } else {
-      setRequests(data || []);
     }
     setLoading(false);
   };
