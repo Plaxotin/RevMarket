@@ -27,23 +27,32 @@ export const BuyerContacts = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (hasUserOffer && currentUserId && currentUserId !== requestUserId) {
-      loadBuyerProfile();
+    if (!hasUserOffer || !currentUserId || currentUserId === requestUserId) {
+      setProfile(null);
+      setLoading(false);
+      return;
     }
+    void loadBuyerProfile();
   }, [hasUserOffer, currentUserId, requestUserId]);
 
   const loadBuyerProfile = async () => {
+    setProfile(null);
     setLoading(true);
-    const { data } = await supabase
-      .from("profiles")
-      .select("name, phone, email, city")
-      .eq("id", requestUserId)
-      .single();
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, phone, email, city")
+        .eq("id", requestUserId)
+        .single();
 
-    if (data) {
-      setProfile(data);
+      if (data) {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error("Failed to load buyer profile:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Owner of the request sees nothing

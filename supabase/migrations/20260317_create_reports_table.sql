@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_reports_target ON public.reports(target_type, tar
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
 -- Политика: авторизованные пользователи могут создавать жалобы
+DROP POLICY IF EXISTS "Users can create reports" ON public.reports;
 CREATE POLICY "Users can create reports"
   ON public.reports
   FOR INSERT
@@ -33,6 +34,7 @@ CREATE POLICY "Users can create reports"
   WITH CHECK (auth.uid() = reporter_id);
 
 -- Политика: пользователь видит только свои жалобы
+DROP POLICY IF EXISTS "Users can view own reports" ON public.reports;
 CREATE POLICY "Users can view own reports"
   ON public.reports
   FOR SELECT

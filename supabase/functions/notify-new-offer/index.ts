@@ -18,6 +18,15 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/** Escape user-controlled strings before interpolating into HTML */
+const escapeHtml = (value: string): string =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
 interface WebhookPayload {
   type: "INSERT";
   table: string;
@@ -33,6 +42,12 @@ interface WebhookPayload {
 
 Deno.serve(async (req: Request) => {
   try {
+    // Verify the request comes from Supabase (Database Webhook sends the service role JWT)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const payload: WebhookPayload = await req.json();
 
     if (payload.type !== "INSERT" || payload.table !== "offers") {
@@ -82,16 +97,16 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: "РеверсМаркет <noreply@rev-market.vercel.app>",
         to: [buyerProfile.email],
-        subject: `Новое предложение на ваш запрос «${request.title}»`,
+        subject: `Новое предложение на ваш запрос «${escapeHtml(request.title)}»`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #7c3aed;">🎉 Новое предложение!</h2>
-            <p>Здравствуйте, <strong>${buyerProfile.name}</strong>!</p>
-            <p>На ваш запрос <strong>«${request.title}»</strong> поступило новое предложение:</p>
+            <p>Здравствуйте, <strong>${escapeHtml(buyerProfile.name)}</strong>!</p>
+            <p>На ваш запрос <strong>«${escapeHtml(request.title)}»</strong> поступило новое предложение:</p>
             <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-              <p><strong>Компания:</strong> ${offer.company}</p>
-              <p><strong>Цена:</strong> ${offer.price} ₽</p>
-              <p><strong>Описание:</strong> ${offer.description}</p>
+              <p><strong>Компания:</strong> ${escapeHtml(offer.company)}</p>
+              <p><strong>Цена:</strong> ${escapeHtml(offer.price)} ₽</p>
+              <p><strong>Описание:</strong> ${escapeHtml(offer.description)}</p>
             </div>
             <a href="https://rev-market.vercel.app/request/${offer.request_id}"
                style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 8px;">
@@ -106,6 +121,15 @@ Deno.serve(async (req: Request) => {
     });
 
     const emailResult = await emailResponse.json();
+
+    if (!emailResponse.ok) {
+      console.error("Resend error:", emailResult);
+      return new Response(JSON.stringify({ error: "Email send failed" }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     console.log("Email sent:", emailResult);
 
     return new Response(JSON.stringify({ success: true }), {

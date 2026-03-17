@@ -112,6 +112,9 @@ export const ReportButton = ({
           title: "Жалоба отправлена",
           description: "Спасибо! Мы рассмотрим вашу жалобу.",
         });
+        setOpen(false);
+        setReason("");
+        setComment("");
       }
     } catch {
       toast({
@@ -122,9 +125,6 @@ export const ReportButton = ({
     }
 
     setSubmitting(false);
-    setOpen(false);
-    setReason("");
-    setComment("");
   };
 
   return (
@@ -135,6 +135,7 @@ export const ReportButton = ({
           size={size}
           className="text-muted-foreground hover:text-destructive"
           title="Пожаловаться"
+          aria-label="Пожаловаться"
         >
           <Flag className="w-4 h-4" />
           {size !== "icon" && <span className="ml-1">Пожаловаться</span>}
