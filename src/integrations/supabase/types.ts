@@ -101,6 +101,47 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          id: string
+          target_type: string
+          target_id: string
+          reporter_id: string
+          reason: string
+          comment: string | null
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          target_type: string
+          target_id: string
+          reporter_id: string
+          reason: string
+          comment?: string | null
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          target_type?: string
+          target_id?: string
+          reporter_id?: string
+          reason?: string
+          comment?: string | null
+          status?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           city: string | null
