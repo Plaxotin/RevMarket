@@ -7,18 +7,12 @@ export const Footer = () => {
       <div className="container px-4 py-6 mx-auto text-white">
         <div className="flex flex-col md:flex-row items-start justify-between gap-10">
           <div className="flex flex-col gap-3 text-sm w-full md:w-auto text-left">
-            <a href="#about" className="hover:text-gray-300 transition-colors">
-              О нас
-            </a>
-            <a href="#faq" className="hover:text-gray-300 transition-colors">
-              Часто задаваемые вопросы
-            </a>
-            <a href="#contacts" className="hover:text-gray-300 transition-colors">
-              Контакты
-            </a>
-            <a href="#help" className="hover:text-gray-300 transition-colors">
-              Помощь
-            </a>
+            <Link to="/" className="hover:text-gray-300 transition-colors">
+              Главная
+            </Link>
+            <Link to="/auth" className="hover:text-gray-300 transition-colors">
+              Войти
+            </Link>
           </div>
 
           <div className="flex justify-center md:justify-end items-center w-full md:w-auto -mt-8 md:-mt-[30px]">
@@ -34,15 +28,15 @@ export const Footer = () => {
         <div className="border-t border-white/20 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm">
-              © 2024 РеверсМаркет. Все права защищены.
+              © 2024–2026 РеверсМаркет. Все права защищены.
             </p>
             <div className="flex gap-6 text-sm">
-              <a href="#privacy" className="hover:text-gray-300 transition-colors">
+              <Link to="/privacy" className="hover:text-gray-300 transition-colors">
                 Политика конфиденциальности
-              </a>
-              <a href="#terms" className="hover:text-gray-300 transition-colors">
+              </Link>
+              <Link to="/terms" className="hover:text-gray-300 transition-colors">
                 Условия использования
-              </a>
+              </Link>
             </div>
           </div>
         </div>
