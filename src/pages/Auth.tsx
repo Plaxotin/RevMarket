@@ -75,8 +75,7 @@ const Auth = () => {
     }
   };
 
-  const handleVKSuccess = async (data: unknown) => {
-    console.log("VK ID success payload:", data);
+  const handleVKSuccess = async (_data: unknown) => {
     // TODO: Для полной интеграции нужен Supabase Edge Function
     // который обменяет VK code на токен и создаст/свяжет Supabase-сессию.
     // См. supabase/functions/vk-auth/README.md
