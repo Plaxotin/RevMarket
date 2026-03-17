@@ -18,6 +18,8 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { translateSupabaseError } from "@/utils/errorMessages";
+import { BuyerContacts } from "@/components/BuyerContacts";
+import { ReportButton } from "@/components/ReportButton";
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -451,14 +453,23 @@ const RequestDetail = () => {
                       </Button>
                     )}
                     {user && user.id !== request.user_id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleToggleFavorite}
-                        title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
-                      >
-                        <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleToggleFavorite}
+                          title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
+                        >
+                          <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                        </Button>
+                        <ReportButton
+                          targetType="request"
+                          targetId={request.id}
+                          currentUserId={user?.id}
+                          variant="ghost"
+                          size="icon"
+                        />
+                      </>
                     )}
                   </div>
                 </div>
@@ -567,9 +578,20 @@ const RequestDetail = () => {
                               </div>
                             </div>
                             <p className="text-sm mb-3">{offer.description}</p>
-                            <p className="text-sm text-muted-foreground mb-3">
-                              <span className="font-semibold">Контакт:</span> {offer.contact}
-                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-semibold">Контакт:</span> {offer.contact}
+                              </p>
+                              {user && offer.user_id !== user.id && (
+                                <ReportButton
+                                  targetType="offer"
+                                  targetId={offer.id}
+                                  currentUserId={user?.id}
+                                  variant="ghost"
+                                  size="sm"
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -580,7 +602,7 @@ const RequestDetail = () => {
             </Card>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-4">
             <Card className="shadow-card sticky top-6 animate-scale-in">
               <CardHeader>
                 <CardTitle>Сделать предложение</CardTitle>
@@ -743,6 +765,13 @@ const RequestDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Контакты покупателя — видны только продавцу, сделавшему оффер */}
+            <BuyerContacts
+              requestUserId={request.user_id}
+              currentUserId={user?.id || null}
+              hasUserOffer={!!offers.find((o: any) => o.user_id === user?.id)}
+            />
           </div>
         </div>
       </div>

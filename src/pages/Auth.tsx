@@ -75,19 +75,27 @@ const Auth = () => {
     }
   };
 
-  const handleVKSuccess = (data: unknown) => {
-    console.log("VK ID success", data);
+  const handleVKSuccess = async (data: unknown) => {
+    console.log("VK ID success payload:", data);
+    // TODO: Для полной интеграции нужен Supabase Edge Function
+    // который обменяет VK code на токен и создаст/свяжет Supabase-сессию.
+    // См. supabase/functions/vk-auth/README.md
     toast({
-      title: "Авторизация VK ID",
-      description: "Вход через VK ID пока в разработке",
+      title: "VK ID",
+      description: "Вход через VK ID пока в разработке. Пожалуйста, используйте SMS-авторизацию.",
     });
   };
 
   const handleVKError = (error: unknown) => {
     console.error("VK ID error:", error);
+    // Don't show error toast for user-cancelled flows
+    if (error && typeof error === "object" && "type" in error) {
+      const errObj = error as { type: string };
+      if (errObj.type === "VKSDKOneTapAuthEventsCancel") return;
+    }
     toast({
-      title: "Ошибка авторизации VK ID",
-      description: "Не удалось завершить вход через VK ID",
+      title: "Ошибка VK ID",
+      description: "Не удалось подключить VK ID. Используйте SMS-авторизацию.",
       variant: "destructive",
     });
   };
