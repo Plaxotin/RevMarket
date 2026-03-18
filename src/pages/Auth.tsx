@@ -75,14 +75,59 @@ const Auth = () => {
     }
   };
 
-  const handleVKSuccess = async (_data: unknown) => {
-    // TODO: Для полной интеграции нужен Supabase Edge Function
-    // который обменяет VK code на токен и создаст/свяжет Supabase-сессию.
-    // См. supabase/functions/vk-auth/README.md
-    toast({
-      title: "VK ID",
-      description: "Вход через VK ID пока в разработке. Пожалуйста, используйте SMS-авторизацию.",
-    });
+  const handleVKSuccess = async (data: { code: string; device_id: string }) => {
+    setLoading(true);
+    try {
+      const { data: responseData, error } = await supabase.functions.invoke(
+        "vk-auth",
+        { body: { code: data.code, device_id: data.device_id } },
+      );
+
+      if (error) {
+        // Try to extract a human-readable message from the edge-function response
+        let msg = "Ошибка авторизации через VK ID";
+        try {
+          const errBody =
+            typeof error.context?.json === "function"
+              ? await error.context.json()
+              : null;
+          if (errBody?.error) msg = errBody.error;
+        } catch { /* ignore parse failures */ }
+        throw new Error(msg);
+      }
+
+      if (
+        !responseData?.session?.access_token ||
+        !responseData?.session?.refresh_token
+      ) {
+        throw new Error("Сервер не вернул сессию");
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: responseData.session.access_token,
+        refresh_token: responseData.session.refresh_token,
+      });
+
+      if (sessionError) throw sessionError;
+
+      toast({
+        title: "Успешный вход!",
+        description: "Добро пожаловать",
+      });
+      navigate("/");
+    } catch (err) {
+      console.error("VK auth error:", err);
+      toast({
+        title: "Ошибка VK ID",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Не удалось войти через VK ID. Попробуйте SMS-авторизацию.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVKError = (error: unknown) => {
@@ -252,9 +297,9 @@ const Auth = () => {
         .on(VKID.WidgetEvents.ERROR, handleVKError)
         .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, (payload: any) => {
           const { code, device_id } = payload;
-          VKID.Auth.exchangeCode(code, device_id)
-            .then(handleVKSuccess)
-            .catch(handleVKError);
+          // Send code + device_id to our edge function for server-side
+          // exchange (uses client_secret, keeps VK credentials off the client).
+          handleVKSuccess({ code, device_id });
         });
 
       vkWidgetInitializedRef.current = true;
