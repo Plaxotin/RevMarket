@@ -142,6 +142,44 @@ export type Database = {
           },
         ]
       }
+      notification_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          telegram_username: string | null
+          is_active: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email: string
+          telegram_username?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email?: string
+          telegram_username?: string | null
+          is_active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           city: string | null
@@ -216,10 +254,70 @@ export type Database = {
           },
         ]
       }
-    }
+      request_reports: {
+        Row: {
+          id: string
+          request_id: string
+          reporter_id: string
+          reason: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          reporter_id: string
+          reason?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          reporter_id?: string
+          reason?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_reports_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    },
     Views: {
-      [_ in never]: never
-    }
+      offers_visible: {
+        Row: {
+          id: string
+          request_id: string
+          user_id: string
+          company: string
+          price: string
+          description: string
+          created_at: string | null
+          images: string[] | null
+          contact: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    },
     Functions: {
       [_ in never]: never
     }

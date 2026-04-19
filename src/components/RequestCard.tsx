@@ -33,22 +33,10 @@ const categoryConfig: Record<string, {
     iconBg: "bg-purple-500",
     iconColor: "text-white"
   },
-  "Дизайн": {
-    bgGradient: "from-white to-gray-50",
-    borderColor: "border-gray-200",
-    iconBg: "bg-pink-500",
-    iconColor: "text-white"
-  },
   "Мебель": {
     bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
     iconBg: "bg-amber-500",
-    iconColor: "text-white"
-  },
-  "Образование": {
-    bgGradient: "from-white to-gray-50",
-    borderColor: "border-gray-200",
-    iconBg: "bg-blue-500",
     iconColor: "text-white"
   },
   "Авто": {
@@ -57,7 +45,7 @@ const categoryConfig: Record<string, {
     iconBg: "bg-red-500",
     iconColor: "text-white"
   },
-  "Одежда и аксессуары": {
+  "Одежда и обувь": {
     bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
     iconBg: "bg-teal-500",
@@ -67,12 +55,6 @@ const categoryConfig: Record<string, {
     bgGradient: "from-white to-gray-50",
     borderColor: "border-gray-200",
     iconBg: "bg-yellow-500",
-    iconColor: "text-white"
-  },
-  "Животные": {
-    bgGradient: "from-white to-gray-50",
-    borderColor: "border-gray-200",
-    iconBg: "bg-[#6B8E23]",
     iconColor: "text-white"
   },
   "Запчасти": {
@@ -120,7 +102,7 @@ const getIconForCategory = (category: string, iconColor: string) => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
       </svg>
     ),
-    "Одежда и аксессуары": (
+    "Одежда и обувь": (
       <svg className={`w-6 h-6 ${iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
       </svg>
@@ -144,11 +126,6 @@ const getIconForCategory = (category: string, iconColor: string) => {
       <svg className={`w-6 h-6 ${iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-      </svg>
-    ),
-    "Животные": (
-      <svg className={`w-6 h-6 ${iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
       </svg>
     ),
     "Детские товары": (

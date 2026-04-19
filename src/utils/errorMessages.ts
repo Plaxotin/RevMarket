@@ -71,7 +71,13 @@ export const translateSupabaseError = (errorMessage: string): string => {
   if (lowerMessage.includes('500') || lowerMessage.includes('server')) {
     return "Ошибка сервера. Попробуйте позже";
   }
-  
+  if (lowerMessage.includes('request_daily_limit_exceeded')) {
+    return "Превышен лимит новых объявлений на сегодня. Попробуйте завтра.";
+  }
+  if (lowerMessage.includes('offer_daily_limit_exceeded')) {
+    return "Превышен лимит предложений на сегодня. Попробуйте завтра.";
+  }
+
   // Возвращаем оригинальное сообщение, если не найдено совпадений
   return errorMessage;
 };

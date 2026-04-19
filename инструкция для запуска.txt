@@ -2,3 +2,15 @@
 2. npm run dev
 
 supabase url: https://waijugzmtihecwszbfju.supabase.co/
+
+# 1. Проверить статус
+git status
+
+# 2. Добавить все изменения
+git add .
+
+# 3. Создать commit
+git commit -m "Описание ваших изменений"
+
+# 4. Отправить на GitHub
+git push origin main

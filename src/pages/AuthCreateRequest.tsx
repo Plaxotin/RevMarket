@@ -19,6 +19,7 @@ import { CATEGORIES } from "@/data/categories";
 import { Loader2, X, HelpCircle } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { translateSupabaseError } from "@/utils/errorMessages";
+import { validateRussianPhone, handlePhoneInput, normalizePhone } from "@/utils/phoneValidation";
 import { RubleIcon } from "@/components/RubleIcon";
 import {
   Collapsible,
@@ -37,6 +38,7 @@ const AuthCreateRequest = () => {
   const [phone, setPhone] = useState("");
   const [smsCode, setSmsCode] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [requestData, setRequestData] = useState({
     title: "",
     description: "",
@@ -77,10 +79,34 @@ const AuthCreateRequest = () => {
       return false;
     }
 
+    // Валидация номера телефона
+    const validation = validateRussianPhone(phoneNumber);
+    if (!validation.valid) {
+      setPhoneError(validation.error || 'Некорректный номер телефона');
+      toast({
+        title: "Ошибка валидации",
+        description: validation.error || 'Некорректный номер телефона',
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setPhoneError(null);
+    const normalizedPhone = validation.normalized || normalizePhone(phoneNumber);
+    
+    if (!normalizedPhone) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обработать номер телефона",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        phone: phoneNumber,
+        phone: normalizedPhone,
         options: {
           channel: 'sms'
         }
@@ -98,7 +124,7 @@ const AuthCreateRequest = () => {
           title: "SMS отправлен",
           description: "Код подтверждения отправлен на ваш номер",
         });
-        setPhone(phoneNumber);
+        setPhone(normalizedPhone);
         setAuthStep('code');
         startCountdown();
         return true;
@@ -423,93 +449,31 @@ const AuthCreateRequest = () => {
                       placeholder="+7 (999) 123-45-67"
                       value={phone}
                       onChange={(e) => {
-                        let value = e.target.value;
-                        // Разрешаем только цифры и "+"
-                        value = value.replace(/[^+\d]/g, '');
-                        // Если в начале вводят 9, добавляем +7
-                        if (value.startsWith('9')) {
-                          value = '+7' + value;
-                        }
-                        // Если вводят "+", разрешаем его только первым символом
-                        if (value.startsWith('+')) {
-                          setPhone(value);
-                        } else if (/^\d/.test(value)) {
-                          // Если начинается с цифры (но не с 9), то добавляем +7
-                          if (value.startsWith('7')) {
-                            setPhone('+' + value);
-                          } else if (value.startsWith('8')) {
-                            setPhone('+7' + value.substring(1));
+                        const formatted = handlePhoneInput(e.target.value);
+                        setPhone(formatted);
+                        setPhoneError(null);
+                      }}
+                      onBlur={() => {
+                        if (phone) {
+                          const validation = validateRussianPhone(phone);
+                          if (!validation.valid) {
+                            setPhoneError(validation.error || null);
                           } else {
-                            setPhone(value);
+                            setPhoneError(null);
                           }
-                        } else {
-                          setPhone(value);
                         }
                       }}
-                      onInput={(e) => {
-                        const target = e.target as HTMLInputElement;
-                        let value = target.value.replace(/[^+\d]/g, '');
-                        // Форматируем номер в маске +7 (999) 123-45-67
-                        if (value.startsWith('+7')) {
-                          const digits = value.substring(2).replace(/\D/g, '');
-                          if (digits.length === 0) {
-                            target.value = '+7';
-                          } else if (digits.length <= 3) {
-                            target.value = `+7 (${digits}`;
-                          } else if (digits.length <= 6) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                          } else if (digits.length <= 8) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                          } else {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
-                          }
-                          setPhone(target.value);
-                        } else if (value.startsWith('7')) {
-                          const digits = value.substring(1).replace(/\D/g, '');
-                          if (digits.length === 0) {
-                            target.value = '+7';
-                          } else if (digits.length <= 3) {
-                            target.value = `+7 (${digits}`;
-                          } else if (digits.length <= 6) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                          } else if (digits.length <= 8) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                          } else {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
-                          }
-                          setPhone(target.value);
-                        } else if (value.startsWith('8')) {
-                          const digits = value.substring(1).replace(/\D/g, '');
-                          if (digits.length === 0) {
-                            target.value = '+7';
-                          } else if (digits.length <= 3) {
-                            target.value = `+7 (${digits}`;
-                          } else if (digits.length <= 6) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                          } else if (digits.length <= 8) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                          } else {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
-                          }
-                          setPhone(target.value);
-                        } else if (value.startsWith('9') || value.match(/^\d/)) {
-                          const digits = value.replace(/\D/g, '');
-                          if (digits.length === 0) {
-                            target.value = '';
-                          } else if (digits.length <= 3) {
-                            target.value = `+7 (${digits}`;
-                          } else if (digits.length <= 6) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                          } else if (digits.length <= 8) {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                          } else {
-                            target.value = `+7 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
-                          }
-                          setPhone(target.value);
-                        }
-                      }}
+                      className={phoneError ? 'border-red-500' : ''}
                       disabled={authStep === 'code'}
                     />
+                    {phoneError && (
+                      <p className="text-sm text-red-500">{phoneError}</p>
+                    )}
+                    {!phoneError && phone && (
+                      <p className="text-sm text-gray-500">
+                        Формат: +7 (XXX) XXX-XX-XX
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -552,7 +516,13 @@ const AuthCreateRequest = () => {
               />
 
               <div className="pt-4">
-                <Button type="submit" size="lg" className="w-full" variant={authStep === 'phone' ? 'sms-gradient' : 'default'} disabled={loading}>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full" 
+                  variant={authStep === 'phone' ? 'sms-gradient' : 'default'} 
+                  disabled={loading || (authStep === 'phone' && (!!phoneError || !phone))}
+                >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

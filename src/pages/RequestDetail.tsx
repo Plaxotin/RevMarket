@@ -8,15 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { checkAuth } from "@/utils/auth";
 import { formatPrice } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { BuyerContacts } from "@/components/BuyerContacts";
 import { ReportButton } from "@/components/ReportButton";
@@ -46,6 +43,7 @@ const RequestDetail = () => {
   const [offers, setOffers] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const companyInputRef = useRef<HTMLInputElement>(null);
   const [offerForm, setOfferForm] = useState({
@@ -55,7 +53,6 @@ const RequestDetail = () => {
     phone: "",
     email: "",
   });
-
   useEffect(() => {
     loadData();
   }, [id]);
@@ -119,19 +116,26 @@ const RequestDetail = () => {
 
     setRequest(requestData);
 
-    // Load offers
+    // Load offers (contact скрыт для посторонних через view на стороне БД)
     const { data: offersData } = await supabase
-      .from("offers")
-      .select(`
-        *,
-        profiles (
-          name
-        )
-      `)
+      .from("offers_visible")
+      .select("*")
       .eq("request_id", id)
       .order("created_at", { ascending: false });
 
     setOffers(offersData || []);
+
+    // Проверяем подписку на уведомления
+    if (currentUser && requestData?.user_id === currentUser.id) {
+      const { data: subscription } = await supabase
+        .from('notification_subscriptions')
+        .select('is_active')
+        .eq('user_id', currentUser.id)
+        .eq('is_active', true)
+        .single();
+        
+      setIsSubscribed(!!subscription);
+    }
 
     // Check if favorite
     if (currentUser) {
@@ -253,6 +257,33 @@ const RequestDetail = () => {
         variant: "destructive",
       });
     } else {
+      // Вызываем Edge Function для отправки уведомлений владельцу запроса
+      try {
+        const { data: offerData } = await supabase
+          .from('offers')
+          .select('id')
+          .eq('request_id', id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (offerData) {
+          // Вызов Edge Function асинхронно, не блокируя UI
+          supabase.functions.invoke('send-offer-notification', {
+            body: {
+              requestId: id,
+              offerId: offerData.id
+            }
+          }).catch(error => {
+            console.error('Failed to send notifications:', error)
+            // Не показываем ошибку пользователю, т.к. предложение уже создано
+          })
+        }
+      } catch (error) {
+        console.error('Failed to trigger notifications:', error)
+      }
+
       toast({
         title: "Успешно!",
         description: "Ваше предложение отправлено",
@@ -430,8 +461,8 @@ const RequestDetail = () => {
       <div className="relative z-10">
         <Navbar onCityChange={() => {}} />
         <div className="container px-4 py-12 mx-auto max-w-5xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="flex flex-row gap-6 overflow-x-auto items-stretch">
+          <div className="flex-1 min-w-0 flex flex-col gap-6">
             <Card className="shadow-card animate-slide-up">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -500,6 +531,18 @@ const RequestDetail = () => {
                   </p>
                 )}
                 
+                {/* Сноска о подписке на уведомления */}
+                {user && user.id === request.user_id && isSubscribed && (
+                  <div className="mb-4 p-3 bg-green-50/10 border border-green-200/20 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-green-200">
+                        Вы подписаны на уведомления о новых предложениях на выбранные каналы (email и/или Telegram, в зависимости от настроек сервиса).
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Отображение изображений */}
                 {request.images && request.images.length > 0 && (
                   <div className="mt-6">
@@ -527,14 +570,14 @@ const RequestDetail = () => {
               </CardContent>
             </Card>
 
-            <Card className="shadow-card animate-fade-in">
-              <CardHeader>
+            <Card className="shadow-card animate-fade-in flex-1 flex flex-col min-h-0">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="w-5 h-5" />
                   Предложения ({offers.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
                 {offers.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     Пока нет предложений. Будьте первым!
@@ -578,9 +621,16 @@ const RequestDetail = () => {
                               </div>
                             </div>
                             <p className="text-sm mb-3">{offer.description}</p>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-sm text-muted-foreground">
-                                <span className="font-semibold">Контакт:</span> {offer.contact}
+                                <span className="font-semibold">Контакт:</span>{" "}
+                                {offer.contact ? (
+                                  offer.contact
+                                ) : (
+                                  <span className="italic opacity-90">
+                                    скрыт — виден только автору объявления и автору этого предложения
+                                  </span>
+                                )}
                               </p>
                               {user && offer.user_id !== user.id && (
                                 <ReportButton
@@ -602,15 +652,15 @@ const RequestDetail = () => {
             </Card>
           </div>
 
-          <div className="lg:col-span-1 space-y-4">
-            <Card className="shadow-card sticky top-6 animate-scale-in">
-              <CardHeader>
+          <div className="flex-1 min-w-[280px] flex flex-col min-h-0 lg:max-w-md">
+            <Card className="shadow-card sticky top-6 animate-scale-in flex-1 flex flex-col w-full min-h-0">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle>Сделать предложение</CardTitle>
                 <CardDescription>
                   {user ? "Предложите свой товар или услугу покупателю" : "Войдите, чтобы сделать предложение"}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 flex flex-col min-h-0">
                 {user ? (
                   (() => {
                     const userOffer = offers.find(offer => offer.user_id === user.id);
@@ -624,7 +674,7 @@ const RequestDetail = () => {
                       );
                     }
                     return (
-                      <form onSubmit={handleSubmitOffer} className="space-y-4">
+                      <form onSubmit={handleSubmitOffer} className="space-y-4 flex-1 flex flex-col">
                   <div className="space-y-2">
                     <Label htmlFor="company">Компания/Имя *</Label>
                     <Input
@@ -687,15 +737,17 @@ const RequestDetail = () => {
                     />
                   </div>
 
-                    <Button type="submit" className="w-full" disabled={submitting}>
-                      {submitting ? "Отправка..." : "Отправить предложение"}
-                    </Button>
+                    <div className="mt-auto">
+                      <Button type="submit" className="w-full" disabled={submitting}>
+                        {submitting ? "Отправка..." : "Отправить предложение"}
+                      </Button>
+                    </div>
                     </form>
                     );
                   })()
                 ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-4 opacity-50 pointer-events-none">
+                  <div className="space-y-4 flex-1 flex flex-col">
+                    <div className="space-y-4 opacity-50 pointer-events-none flex-1">
                       <div className="space-y-2">
                         <Label htmlFor="company-disabled">Компания/Имя *</Label>
                         <Input
@@ -745,13 +797,9 @@ const RequestDetail = () => {
                           disabled
                         />
                       </div>
-
-                      <Button className="w-full" disabled>
-                        Войти для отправки предложения
-                      </Button>
                     </div>
                     
-                    <div className="text-center py-4 border-t">
+                    <div className="text-center py-4 border-t mt-auto">
                       <p className="text-sm text-muted-foreground mb-3">
                         Для создания предложения необходимо войти в систему
                       </p>

@@ -64,8 +64,8 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   };
 
   return (
-    <div className="sticky top-[3.9rem] z-40 bg-background/20 backdrop-blur-md border-b border-border/40 shadow-lg">
-      <div className="container px-6 py-3 mx-auto max-w-5xl">
+    <div className="sticky top-16 z-40 backdrop-blur-md bg-black/50 border-b border-border/40 shadow-lg relative overflow-hidden">
+      <div className="container px-6 py-3 mx-auto max-w-5xl relative z-10">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch">
           <Button 
             variant="hero" 

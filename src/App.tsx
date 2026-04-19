@@ -24,14 +24,16 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/create-request" element={<CreateRequest />} />
           <Route path="/auth-create-request" element={<AuthCreateRequest />} />
           <Route path="/request/:id" element={<RequestDetail />} />
-          <Route path="/seed-data" element={<SeedData />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
+          {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_SEED === "true") && (
+            <Route path="/seed-data" element={<SeedData />} />
+          )}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

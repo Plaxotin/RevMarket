@@ -388,4 +388,99 @@ All colors MUST be HSL.
   .card-gradient-hover {
     @apply card-gradient hover:shadow-lg hover:scale-105 transition-all duration-300;
   }
+
+  /* Космическая пыль */
+  .space-dust {
+    @apply absolute rounded-full pointer-events-none;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+    filter: blur(0.5px);
+  }
+
+  .space-dust-small {
+    width: 1px;
+    height: 1px;
+  }
+
+  .space-dust-medium {
+    width: 2px;
+    height: 2px;
+  }
+
+  .space-dust-large {
+    width: 3px;
+    height: 3px;
+  }
+
+  .animate-dust-float {
+    animation: dustFloat 8s ease-in-out infinite;
+  }
+
+  .animate-dust-twinkle {
+    animation: dustTwinkle 3s ease-in-out infinite;
+  }
+
+  /* Статичная космическая пыль */
+  .static-dust {
+    @apply absolute rounded-full pointer-events-none;
+  }
+
+  .static-dust-tiny {
+    width: 1px;
+    height: 1px;
+  }
+
+  .static-dust-small {
+    width: 2px;
+    height: 2px;
+  }
+
+  .static-dust-medium {
+    width: 3px;
+    height: 3px;
+  }
+
+  .static-dust-white {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 1), 0 0 8px rgba(255, 255, 255, 0.6);
+  }
+
+  .static-dust-yellow {
+    background: rgba(255, 255, 0, 0.9);
+    box-shadow: 0 0 4px rgba(255, 255, 0, 1), 0 0 8px rgba(255, 255, 0, 0.6);
+  }
+
+  .static-dust-purple {
+    background: rgba(168, 85, 247, 0.9);
+    box-shadow: 0 0 4px rgba(168, 85, 247, 1), 0 0 8px rgba(168, 85, 247, 0.6);
+  }
+}
+
+@keyframes dustFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(10px, -15px) scale(1.2);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-5px, -25px) scale(0.8);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-10px, -10px) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+@keyframes dustTwinkle {
+  0%, 100% {
+    opacity: 0.2;
+    filter: blur(0.5px) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(0.5px) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+  }
 }

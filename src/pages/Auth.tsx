@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { Loader2, Smartphone } from "lucide-react";
 import { translateSupabaseError } from "@/utils/errorMessages";
+import { validateRussianPhone, handlePhoneInput, normalizePhone } from "@/utils/phoneValidation";
 import {
   Dialog,
   DialogContent,
@@ -31,16 +32,41 @@ const Auth = () => {
   const [smsCode, setSmsCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(true);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const vkContainerRef = useRef<HTMLDivElement | null>(null);
   const vkScriptLoadedRef = useRef(false);
   const vkWidgetInitializedRef = useRef(false);
 
   // Функция для отправки SMS кода
   const sendSMSCode = async (phone: string) => {
+    // Валидация номера телефона
+    const validation = validateRussianPhone(phone);
+    if (!validation.valid) {
+      setPhoneError(validation.error || 'Некорректный номер телефона');
+      toast({
+        title: "Ошибка валидации",
+        description: validation.error || 'Некорректный номер телефона',
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setPhoneError(null);
+    const normalizedPhone = validation.normalized || normalizePhone(phone);
+    
+    if (!normalizedPhone) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обработать номер телефона",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        phone: phone,
+        phone: normalizedPhone,
         options: {
           channel: 'sms'
         }
@@ -58,7 +84,7 @@ const Auth = () => {
           title: "SMS отправлен",
           description: "Код подтверждения отправлен на ваш номер",
         });
-        setPhoneNumber(phone);
+        setPhoneNumber(normalizedPhone);
         setAuthStep('code');
         startCountdown();
         return true;
@@ -356,17 +382,41 @@ const Auth = () => {
                       id="signin-phone"
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => {
+                        const formatted = handlePhoneInput(e.target.value);
+                        setPhoneNumber(formatted);
+                        setPhoneError(null);
+                      }}
+                      onBlur={() => {
+                        if (phoneNumber) {
+                          const validation = validateRussianPhone(phoneNumber);
+                          if (!validation.valid) {
+                            setPhoneError(validation.error || null);
+                          } else {
+                            setPhoneError(null);
+                          }
+                        }
+                      }}
                       placeholder="+7 (900) 123-45-67"
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 ${
+                        phoneError ? 'border-red-500' : ''
+                      }`}
                       required
                     />
+                    {phoneError && (
+                      <p className="text-sm text-red-400">{phoneError}</p>
+                    )}
+                    {!phoneError && phoneNumber && (
+                      <p className="text-sm text-white/60">
+                        Формат: +7 (XXX) XXX-XX-XX
+                      </p>
+                    )}
                   </div>
 
                   <Button
                     onClick={() => sendSMSCode(phoneNumber)}
                     className="w-full bg-gradient-to-r from-primary to-accent-purple hover:opacity-90 transition-opacity"
-                    disabled={loading || !phoneNumber}
+                    disabled={loading || !phoneNumber || !!phoneError}
                   >
                     {loading ? (
                       <>

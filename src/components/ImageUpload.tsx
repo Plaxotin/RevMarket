@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseStorage } from "@/utils/environment";
+import { useToast } from "@/hooks/use-toast";
 
 // Helper function to generate unique filenames
 const generateUniqueFilename = (fileExt: string): string => {
@@ -27,6 +28,7 @@ export const ImageUpload = ({
   className = "",
   variant = 'default'
 }: ImageUploadProps) => {
+  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,12 +41,20 @@ export const ImageUpload = ({
     );
 
     if (validFiles.length === 0) {
-      alert('Пожалуйста, выберите только изображения размером до 5MB');
+      toast({
+        title: "Некорректные файлы",
+        description: "Выберите только изображения размером до 5 МБ",
+        variant: "destructive",
+      });
       return;
     }
 
     if (images.length + validFiles.length > maxImages) {
-      alert(`Максимум ${maxImages} изображений`);
+      toast({
+        title: "Лимит",
+        description: `Максимум ${maxImages} изображений`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -55,7 +65,11 @@ export const ImageUpload = ({
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          alert('Необходимо авторизоваться для загрузки изображений');
+          toast({
+            title: "Вход",
+            description: "Авторизуйтесь, чтобы загрузить изображения",
+            variant: "destructive",
+          });
           return;
         }
 
@@ -103,7 +117,11 @@ export const ImageUpload = ({
       }
     } catch (error) {
       console.error('Ошибка загрузки:', error);
-      alert('Ошибка при загрузке изображений');
+      toast({
+        title: "Ошибка загрузки",
+        description: "Не удалось загрузить изображения",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }

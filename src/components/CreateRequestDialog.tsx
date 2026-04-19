@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/data/categories";
-import { Loader2, HelpCircle } from "lucide-react";
+import { Loader2, HelpCircle, CheckCircle } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { RubleIcon } from "@/components/RubleIcon";
@@ -62,6 +62,11 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [cityTouched, setCityTouched] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState({
+    email: '',
+    telegramUsername: '',
+    subscribe: true,
+  });
 
   const formatBudgetDisplay = (value: string) => {
     if (!value) return "";
@@ -131,7 +136,41 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
           ...prev,
           city: profile.city || prev.city,
         }));
+        
+        // Автозаполнение email для подписки, если он есть в профиле
+        if (profile.email) {
+          setSubscriptionData(prev => ({
+            ...prev,
+            email: profile.email || prev.email,
+          }));
+        }
       }
+    }
+  };
+
+  const saveNotificationSubscription = async (userId: string) => {
+    if (!subscriptionData.subscribe || !subscriptionData.email) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notification_subscriptions')
+        .upsert({
+          user_id: userId,
+          email: subscriptionData.email,
+          telegram_username: subscriptionData.telegramUsername || null,
+          is_active: true,
+        }, {
+          onConflict: 'user_id',
+        });
+
+      if (error) {
+        console.error('Failed to save subscription:', error);
+        // Не блокируем создание запроса при ошибке подписки
+      }
+    } catch (error) {
+      console.error('Error saving subscription:', error);
     }
   };
 
@@ -156,6 +195,11 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
     setImages([]);
     setHowItWorksOpen(false);
     setCityTouched(false);
+    setSubscriptionData({
+      email: '',
+      telegramUsername: '',
+      subscribe: true,
+    });
   };
 
   // Функция для отправки SMS кода
@@ -327,6 +371,11 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
           variant: "destructive",
         });
       } else {
+        // Сохраняем подписку после успешного создания запроса
+        if (subscriptionData.subscribe) {
+          await saveNotificationSubscription(userId);
+        }
+
         toast({
           title: "Успешно!",
           description: "Запрос успешно создан",
@@ -617,6 +666,72 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
               )}
             </div>
           )}
+
+          <div className="space-y-4 p-4 bg-blue-50/10 border border-blue-200/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="subscribe-notifications"
+                checked={subscriptionData.subscribe}
+                onChange={(e) => setSubscriptionData({
+                  ...subscriptionData,
+                  subscribe: e.target.checked
+                })}
+                disabled={authStep === 'code'}
+                className="rounded cursor-pointer"
+              />
+              <Label htmlFor="subscribe-notifications" className="text-white cursor-pointer">
+                Получать уведомления о новых предложениях
+              </Label>
+            </div>
+            
+            {subscriptionData.subscribe && (
+              <div className="space-y-3 mt-3 pl-6">
+                <div className="space-y-2">
+                  <Label htmlFor="notification-email" className="text-white text-sm">
+                    Email для уведомлений *
+                  </Label>
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={subscriptionData.email}
+                    onChange={(e) => setSubscriptionData({
+                      ...subscriptionData,
+                      email: e.target.value
+                    })}
+                    disabled={authStep === 'code'}
+                    required={subscriptionData.subscribe}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="telegram-username" className="text-white text-sm">
+                    Telegram username (необязательно)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/60">@</span>
+                    <Input
+                      id="telegram-username"
+                      type="text"
+                      placeholder="username"
+                      value={subscriptionData.telegramUsername}
+                      onChange={(e) => setSubscriptionData({
+                        ...subscriptionData,
+                        telegramUsername: e.target.value.replace('@', '')
+                      })}
+                      disabled={authStep === 'code'}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    />
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Укажите ваш Telegram username для получения уведомлений в боте
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           <ImageUpload
             images={images}

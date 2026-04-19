@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logout } from "@/utils/auth";
 import { CITIES } from "@/data/cities";
-import RevMarketLogo from "../../revMarketLogo3.svg";
+import RevMarketLogo from "../../ver6.1.svg";
 
 
 interface NavbarProps {
@@ -86,15 +86,17 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-black/60 backdrop-blur-md border-b border-white/10">
-      <div className="container px-4 mx-auto">
+    <nav 
+      className="sticky top-0 z-50 backdrop-blur-md bg-black/50 relative overflow-hidden"
+    >
+      <div className="container px-4 mx-auto relative z-10">
         <div className="flex items-center justify-between h-16">
           {/* Logo - всегда видимый */}
-          <Link to="/" className="flex h-full items-center justify-center gap-3 flex-shrink-0">
+          <Link to="/" className="flex h-full items-center justify-center gap-3 flex-shrink-0 -ml-2">
             <img
               src={RevMarketLogo}
               alt="РеверсМаркет"
-              className="h-[150%] w-auto object-contain brightness-40 self-center transform -translate-y-[8%]"
+              className="h-[128%] w-auto object-contain brightness-40 self-center my-auto"
             />
           </Link>
           
