@@ -37,6 +37,9 @@ jobs:
       run: npm ci
       
     - name: Сборка проекта
+      env:
+        # Должен совпадать с путём GitHub Pages: https://<user>.github.io/<repo>/
+        VITE_BASE_PATH: /RevMarket/
       run: npm run build
       
     - name: Загрузка артефактов
