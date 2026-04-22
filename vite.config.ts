@@ -2,12 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { buildViteBasePath } from "./src/utils/basePath";
 
 // GitHub Pages (project site): задайте VITE_BASE_PATH=/ИмяРепозитория/ в CI (с слэшем в конце).
 // Локально и на Vercel оставьте без переменной — base будет "/".
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: process.env.VITE_BASE_PATH?.replace(/\/?$/, "/") || "/",
+  base: buildViteBasePath(process.env.VITE_BASE_PATH),
   root: '.',
   server: {
     host: "::",

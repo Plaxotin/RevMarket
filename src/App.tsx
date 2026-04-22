@@ -13,11 +13,11 @@ import Profile from "./pages/Profile";
 import SeedData from "./pages/SeedData";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import { getRouterBasename } from "./utils/basePath";
 
 const queryClient = new QueryClient();
 
-const routerBasename =
-  import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
+const routerBasename = getRouterBasename(import.meta.env.BASE_URL);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
