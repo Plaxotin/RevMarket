@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { CITIES } from "@/data/cities";
+import { RequestCard } from "@/components/RequestCard";
+import { isMockSmsAuth, signInForSmsMock } from "@/utils/mockSmsAuth";
 
 const categories = CATEGORIES;
+
+type WizardStep = "product" | "contacts";
 
 const AuthCreateRequest = () => {
   const navigate = useNavigate();
@@ -48,6 +52,45 @@ const AuthCreateRequest = () => {
   });
   const [images, setImages] = useState<string[]>([]);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState<WizardStep>("product");
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const goToContactsStep = () => {
+    const missing: string[] = [];
+    if (!requestData.title?.trim()) missing.push("Название");
+    if (!requestData.description?.trim()) missing.push("Описание");
+    if (!requestData.category?.trim()) missing.push("Категория");
+    if (!requestData.city?.trim()) missing.push("Город");
+    if (missing.length) {
+      toast({
+        title: "Заполните поля",
+        description: `Нужны: ${missing.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setWizardStep("contacts");
+  };
+
+  const goBackToProductStep = () => {
+    setWizardStep("product");
+    setAuthStep("phone");
+    setSmsCode("");
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(0);
+  };
 
   // Функция для отправки SMS кода
   const sendSMSCode = async (phoneNumber: string) => {
@@ -105,6 +148,17 @@ const AuthCreateRequest = () => {
 
     setLoading(true);
     try {
+      if (isMockSmsAuth()) {
+        setPhone(normalizedPhone);
+        setAuthStep("code");
+        startCountdown();
+        toast({
+          title: "Заглушка SMS",
+          description: "SMS не отправляется. Введите любой непустой код и подтвердите.",
+        });
+        return true;
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         phone: normalizedPhone,
         options: {
@@ -154,30 +208,49 @@ const AuthCreateRequest = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phone,
-        token: code,
-        type: 'sms'
-      });
+      let sessionUser: { id: string } | null = null;
 
-      if (error) {
-        toast({
-          title: "Неверный код",
-          description: "Проверьте правильность введенного кода",
-          variant: "destructive",
+      if (isMockSmsAuth()) {
+        const { data, error } = await signInForSmsMock(supabase);
+        if (error || !data.user) {
+          toast({
+            title: "Заглушка SMS",
+            description:
+              translateSupabaseError(error?.message ?? "") ||
+              "Не удалось войти. Включите Anonymous sign-ins в Supabase (Authentication → Providers → Anonymous).",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        sessionUser = data.user;
+      } else {
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone: phone,
+          token: code,
+          type: "sms",
         });
-        setLoading(false);
-        return;
+
+        if (error) {
+          toast({
+            title: "Неверный код",
+            description: "Проверьте правильность введенного кода",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        sessionUser = data.user;
       }
 
       // Profile creation is handled by the backend handle_new_user trigger
       // If city needs to be updated, do it after authentication
-      if (data.user && requestData.city) {
+      if (sessionUser && requestData.city) {
         try {
           const { error: updateError } = await supabase
             .from("profiles")
             .update({ city: requestData.city })
-            .eq("id", data.user.id);
+            .eq("id", sessionUser.id);
           
           if (updateError) {
             console.warn("Could not update profile city:", updateError);
@@ -187,10 +260,7 @@ const AuthCreateRequest = () => {
         }
       }
 
-      // Проверяем, что пользователь авторизован
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      if (!currentUser) {
+      if (!sessionUser) {
         toast({
           title: "Ошибка авторизации",
           description: "Пользователь не авторизован",
@@ -200,12 +270,11 @@ const AuthCreateRequest = () => {
         return;
       }
 
-      // Создание запроса
-      const { error: requestError } = await supabase
+      const { data: inserted, error: requestError } = await supabase
         .from("requests")
         .insert([
           {
-            user_id: currentUser.id,
+            user_id: sessionUser.id,
             title: requestData.title,
             description: requestData.description,
             category: requestData.category,
@@ -213,7 +282,9 @@ const AuthCreateRequest = () => {
             city: requestData.city || null,
             images: images.length > 0 ? images : null,
           },
-        ]);
+        ])
+        .select("id")
+        .single();
 
       if (requestError) {
         toast({
@@ -221,12 +292,12 @@ const AuthCreateRequest = () => {
           description: translateSupabaseError(requestError.message),
           variant: "destructive",
         });
-      } else {
+      } else if (inserted?.id) {
         toast({
           title: "Успешно!",
           description: "Запрос создан",
         });
-        navigate("/");
+        navigate(`/request/${inserted.id}`);
       }
     } catch (error) {
       console.error("Ошибка:", error);
@@ -240,13 +311,18 @@ const AuthCreateRequest = () => {
     }
   };
 
-  // Функция для обратного отсчета
   const startCountdown = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+    }
     setCountdown(60);
-    const timer = setInterval(() => {
+    countdownTimerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+          }
           return 0;
         }
         return prev - 1;
@@ -262,8 +338,13 @@ const AuthCreateRequest = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (authStep === 'phone') {
+
+    if (wizardStep === "product") {
+      goToContactsStep();
+      return;
+    }
+
+    if (authStep === "phone") {
       await sendSMSCode(phone);
     } else {
       await verifySMSCodeAndCreateRequest(smsCode);
@@ -280,6 +361,7 @@ const AuthCreateRequest = () => {
         <Navbar onCityChange={() => {}} />
         <div className="container px-4 py-12 mx-auto max-w-4xl relative">
           {/* Секция "Как это работает?" */}
+          {wizardStep === "product" && (
           <div className="mb-8" style={{ background: 'transparent' }}>
             <div className="text-center">
               <Collapsible open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
@@ -300,7 +382,7 @@ const AuthCreateRequest = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                         </svg>
                       </div>
-                      <h3 className="text-lg font-bold mb-2 text-white">Создайте заявку</h3>
+                      <h3 className="text-lg font-bold mb-2 text-white">Создайте запрос</h3>
                       <p className="text-sm text-white/90">
                         Опишите, что вам нужно: название товара, описание, желаемую цену и сроки
                       </p>
@@ -334,6 +416,7 @@ const AuthCreateRequest = () => {
               </Collapsible>
             </div>
           </div>
+          )}
           
           <Card className="shadow-card animate-slide-up relative">
           <Button
@@ -346,14 +429,16 @@ const AuthCreateRequest = () => {
             <X className="h-6 w-6" />
           </Button>
           <CardHeader>
-            <CardTitle className="text-3xl">Создание запроса и регистрация</CardTitle>
+            <CardTitle className="text-3xl">Создать запрос</CardTitle>
             <CardDescription className="text-base">
-              Создайте свой первый запрос
+              {wizardStep === "product"
+                ? "Шаг 1 из 2: опишите искомый товар"
+                : "Шаг 2 из 2: предпросмотр запроса, телефон и публикация"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Данные запроса */}
+              {wizardStep === "product" && (
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="title">Название *</Label>
@@ -362,7 +447,6 @@ const AuthCreateRequest = () => {
                     placeholder="Например: Ищу iPhone 15 Pro"
                     value={requestData.title}
                     onChange={(e) => setRequestData({ ...requestData, title: e.target.value })}
-                    disabled={authStep === 'code'}
                   />
                 </div>
 
@@ -384,7 +468,6 @@ const AuthCreateRequest = () => {
                       target.style.height = 'auto';
                       target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
                     }}
-                    disabled={authStep === 'code'}
                   />
                 </div>
 
@@ -394,7 +477,6 @@ const AuthCreateRequest = () => {
                     <Select
                       value={requestData.category}
                       onValueChange={(value) => setRequestData({ ...requestData, category: value })}
-                      disabled={authStep === 'code'}
                     >
                       <SelectTrigger id="category">
                         <SelectValue placeholder="Выберите категорию" />
@@ -416,31 +498,48 @@ const AuthCreateRequest = () => {
                       placeholder="Например: 50 000 - 70 000 ₽"
                       value={requestData.budget}
                       onChange={(e) => setRequestData({ ...requestData, budget: e.target.value })}
-                      disabled={authStep === 'code'}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">Город</Label>
-                    <Select
-                      value={requestData.city}
-                      onValueChange={(value) => setRequestData({ ...requestData, city: value })}
-                      disabled={authStep === 'code'}
-                    >
-                      <SelectTrigger id="city">
-                        <SelectValue placeholder="Выберите город" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CITIES.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Город *</Label>
+                  <Select
+                    value={requestData.city}
+                    onValueChange={(value) => setRequestData({ ...requestData, city: value })}
+                  >
+                    <SelectTrigger id="city">
+                      <SelectValue placeholder="Выберите город" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CITIES.map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              )}
+
+              {wizardStep === "contacts" && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Так ваш запрос увидят продавцы после публикации
+                  </p>
+                  <RequestCard
+                    id="__preview__"
+                    title={requestData.title}
+                    description={requestData.description}
+                    category={requestData.category}
+                    budget={requestData.budget}
+                    location={requestData.city}
+                    timeAgo="Предпросмотр"
+                    offersCount={0}
+                    images={images}
+                    preview
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Телефон *</Label>
@@ -476,10 +575,10 @@ const AuthCreateRequest = () => {
                     )}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Поле для SMS кода */}
-              {authStep === 'code' && (
+              {wizardStep === "contacts" && authStep === 'code' && (
                 <div className="space-y-2">
                   <Label htmlFor="smsCode">Код из SMS *</Label>
                   <Input
@@ -507,29 +606,55 @@ const AuthCreateRequest = () => {
                 </div>
               )}
 
-              {/* Загрузка изображений */}
+              {wizardStep === "product" && (
               <ImageUpload
                 images={images}
                 onImagesChange={setImages}
                 maxImages={5}
                 className=""
               />
+              )}
 
-              <div className="pt-4">
+              <div className="pt-4 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                {wizardStep === "contacts" && (
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    onClick={goBackToProductStep}
+                    disabled={loading}
+                    className="sm:w-auto shrink-0"
+                  >
+                    Изменить запрос
+                  </Button>
+                )}
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full" 
-                  variant={authStep === 'phone' ? 'sms-gradient' : 'default'} 
-                  disabled={loading || (authStep === 'phone' && (!!phoneError || !phone))}
+                  className="flex-1 w-full" 
+                  variant={wizardStep === "contacts" && authStep === 'phone' ? 'sms-gradient' : 'default'} 
+                  disabled={
+                    loading ||
+                    (wizardStep === "contacts" &&
+                      authStep === "phone" &&
+                      (!!phoneError || !phone))
+                  }
                 >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {authStep === 'phone' ? "Отправка SMS..." : "Проверка кода..."}
+                    {wizardStep === "product"
+                      ? "Загрузка..."
+                      : authStep === "phone"
+                        ? "Отправка SMS..."
+                        : "Проверка кода..."}
                   </>
                 ) : (
-                  authStep === 'phone' ? "Отправить SMS код" : "Подтвердить код и создать запрос"
+                  wizardStep === "product"
+                    ? "Далее: телефон и публикация"
+                    : authStep === "phone"
+                      ? "Отправить SMS код"
+                      : "Подтвердить и опубликовать"
                 )}
                 </Button>
               </div>

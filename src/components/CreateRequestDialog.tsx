@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/data/categories";
-import { Loader2, HelpCircle, CheckCircle } from "lucide-react";
+import { Loader2, HelpCircle } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { RubleIcon } from "@/components/RubleIcon";
@@ -33,8 +34,12 @@ import { CITIES } from "@/data/cities";
 import { checkAuth } from "@/utils/auth";
 import { CityCombobox } from "@/components/CityCombobox";
 import { formatPrice } from "@/lib/utils";
+import { RequestCard } from "@/components/RequestCard";
+import { isMockSmsAuth, signInForSmsMock } from "@/utils/mockSmsAuth";
 
 const categories = CATEGORIES;
+
+type GuestWizardStep = "product" | "contacts";
 
 interface CreateRequestDialogProps {
   open: boolean;
@@ -44,10 +49,12 @@ interface CreateRequestDialogProps {
 }
 
 export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity }: CreateRequestDialogProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [authStep, setAuthStep] = useState<'phone' | 'code'>('phone');
+  const [guestWizardStep, setGuestWizardStep] = useState<GuestWizardStep>("product");
   const [phone, setPhone] = useState("");
   const [smsCode, setSmsCode] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -121,29 +128,30 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
 
   const loadUser = async () => {
     const { user: currentUser, isAuthenticated } = await checkAuth();
-    if (isAuthenticated && currentUser) {
-      setUser(currentUser);
-      
-      // Загружаем профиль пользователя для автозаполнения
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("phone, email, city")
-        .eq("id", currentUser.id)
-        .single();
+    if (!isAuthenticated || !currentUser) {
+      setUser(null);
+      return;
+    }
+    setUser(currentUser);
+    setGuestWizardStep("product");
 
-      if (profile) {
-        setRequestData(prev => ({
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("phone, email, city")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (profile) {
+      setRequestData((prev) => ({
+        ...prev,
+        city: profile.city || prev.city,
+      }));
+
+      if (profile.email) {
+        setSubscriptionData((prev) => ({
           ...prev,
-          city: profile.city || prev.city,
+          email: profile.email || prev.email,
         }));
-        
-        // Автозаполнение email для подписки, если он есть в профиле
-        if (profile.email) {
-          setSubscriptionData(prev => ({
-            ...prev,
-            email: profile.email || prev.email,
-          }));
-        }
       }
     }
   };
@@ -200,6 +208,37 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
       telegramUsername: '',
       subscribe: true,
     });
+    setGuestWizardStep("product");
+  };
+
+  const goToContactsStep = () => {
+    const isTitleEmpty = !requestData.title || requestData.title.trim() === "";
+    const isCategoryEmpty = !requestData.category || requestData.category.trim() === "";
+    const isCityEmpty = !requestData.city || requestData.city.trim() === "";
+    if (isTitleEmpty || isCategoryEmpty || isCityEmpty) {
+      const missing: string[] = [];
+      if (isTitleEmpty) missing.push("Название");
+      if (isCategoryEmpty) missing.push("Категория");
+      if (isCityEmpty) missing.push("Город");
+      toast({
+        title: "Заполните поля",
+        description: `Нужны: ${missing.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setGuestWizardStep("contacts");
+  };
+
+  const goBackToProductStep = () => {
+    setGuestWizardStep("product");
+    setAuthStep("phone");
+    setSmsCode("");
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(0);
   };
 
   // Функция для отправки SMS кода
@@ -224,8 +263,17 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
 
     if (!phoneNumber || phoneNumber.trim() === '') {
       toast({
+        title: "Нужен номер для SMS",
+        description: "Укажите телефон, чтобы отправить код, или введите номер в поле выше.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (subscriptionData.subscribe && !subscriptionData.email?.trim()) {
+      toast({
         title: "Ошибка",
-        description: "Пожалуйста, введите номер телефона",
+        description: "Укажите email для уведомлений о предложениях или снимите галочку подписки",
         variant: "destructive",
       });
       return false;
@@ -233,6 +281,17 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
 
     setLoading(true);
     try {
+      if (isMockSmsAuth()) {
+        setPhone(phoneNumber);
+        setAuthStep("code");
+        startCountdown();
+        toast({
+          title: "Заглушка SMS",
+          description: "SMS не отправляется. Введите любой непустой код и нажмите «Подтвердить и опубликовать».",
+        });
+        return true;
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         phone: phoneNumber,
         options: {
@@ -282,28 +341,46 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phone,
-        token: code,
-        type: 'sms'
-      });
+      let sessionUser: { id: string } | null = null;
 
-      if (error) {
-        toast({
-          title: "Неверный код",
-          description: "Проверьте правильность введенного кода",
-          variant: "destructive",
+      if (isMockSmsAuth()) {
+        const { data, error } = await signInForSmsMock(supabase);
+        if (error || !data.user) {
+          toast({
+            title: "Заглушка SMS",
+            description:
+              translateSupabaseError(error?.message ?? "") ||
+              "Не удалось войти. Включите Anonymous sign-ins в Supabase (Authentication → Providers → Anonymous).",
+            variant: "destructive",
+          });
+          return;
+        }
+        sessionUser = data.user;
+      } else {
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone: phone,
+          token: code,
+          type: "sms",
         });
-        return;
+
+        if (error) {
+          toast({
+            title: "Неверный код",
+            description: "Проверьте правильность введенного кода",
+            variant: "destructive",
+          });
+          return;
+        }
+        sessionUser = data.user;
       }
 
-      if (data.user && requestData.city) {
+      if (sessionUser && requestData.city) {
         try {
           const { error: updateError } = await supabase
             .from("profiles")
             .update({ city: requestData.city })
-            .eq("id", data.user.id);
-          
+            .eq("id", sessionUser.id);
+
           if (updateError) {
             console.warn("Could not update profile city:", updateError);
           }
@@ -312,9 +389,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
         }
       }
 
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      if (!currentUser) {
+      if (!sessionUser) {
         toast({
           title: "Ошибка авторизации",
           description: "Пользователь не авторизован",
@@ -323,7 +398,16 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
         return;
       }
 
-      await createRequest(currentUser.id);
+      if (subscriptionData.subscribe && !subscriptionData.email?.trim()) {
+        toast({
+          title: "Ошибка",
+          description: "Укажите email для уведомлений или отключите подписку",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createRequest(sessionUser.id);
     } catch (error) {
       console.error("Ошибка:", error);
       toast({
@@ -350,7 +434,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from("requests")
         .insert([
           {
@@ -362,7 +446,9 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
             city: requestData.city || null,
             images: images.length > 0 ? images : null,
           },
-        ]);
+        ])
+        .select("id")
+        .single();
 
       if (error) {
         toast({
@@ -370,21 +456,21 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
           description: "Не удалось создать запрос: " + translateSupabaseError(error.message),
           variant: "destructive",
         });
-      } else {
-        // Сохраняем подписку после успешного создания запроса
+      } else if (inserted?.id) {
         if (subscriptionData.subscribe) {
           await saveNotificationSubscription(userId);
         }
 
         toast({
           title: "Успешно!",
-          description: "Запрос успешно создан",
+          description: "Запрос создан",
         });
         resetForm();
         onOpenChange(false);
         if (onSuccess) {
           onSuccess();
         }
+        navigate(`/request/${inserted.id}`);
       }
     } catch (error: any) {
       console.error("Ошибка при создании запроса:", error);
@@ -401,16 +487,20 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Если пользователь авторизован
     if (user) {
       await createRequest(user.id);
+      return;
+    }
+
+    if (guestWizardStep === "product") {
+      goToContactsStep();
+      return;
+    }
+
+    if (authStep === "phone") {
+      await sendSMSCode(phone);
     } else {
-      // Если не авторизован
-      if (authStep === 'phone') {
-        await sendSMSCode(phone);
-      } else {
-        await verifySMSCodeAndCreateRequest(smsCode);
-      }
+      await verifySMSCodeAndCreateRequest(smsCode);
     }
   };
 
@@ -451,15 +541,19 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
         <div className="overflow-y-auto max-h-[90vh] pl-6 pr-3 py-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/50">
         <DialogHeader className="pr-9">
           <DialogTitle className="text-2xl md:text-3xl text-white">
-            {user ? "Создать запрос" : "Создание запроса и регистрация"}
+            Создать запрос
           </DialogTitle>
           <DialogDescription className="text-base text-white/80">
-            {user ? "Заполните форму ниже, чтобы создать новый запрос" : "Создайте свой первый запрос"}
+            {user
+              ? "Заполните форму ниже, чтобы создать новый запрос"
+              : guestWizardStep === "product"
+                ? "Шаг 1 из 2: опишите искомый товар"
+                : "Шаг 2 из 2: так запрос увидят продавцы. Укажите телефон и контакты для уведомлений о предложениях"}
           </DialogDescription>
         </DialogHeader>
 
         {/* Секция "Как это работает?" */}
-        {!user && (
+        {!user && guestWizardStep === "product" && (
           <div className="mb-4">
             <Collapsible open={howItWorksOpen} onOpenChange={setHowItWorksOpen}>
               <CollapsibleTrigger className="inline-flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -478,7 +572,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                       </svg>
                     </div>
-                    <h3 className="text-sm font-bold mb-2 text-white">Создайте заявку</h3>
+                    <h3 className="text-sm font-bold mb-2 text-white">Создайте запрос</h3>
                     <p className="text-xs text-white/80">
                       Опишите, что вам нужно: название товара, описание, желаемую цену и сроки
                     </p>
@@ -512,14 +606,15 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {(user || (!user && guestWizardStep === "product")) && (
+            <>
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-white">Название *</Label>
+            <Label htmlFor="title" className="text-white">Название</Label>
             <Input
               id="title"
               placeholder="Например: Ищу iPhone 15 Pro"
               value={requestData.title}
               onChange={(e) => setRequestData({ ...requestData, title: e.target.value })}
-              disabled={authStep === 'code'}
               className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
             />
           </div>
@@ -532,17 +627,15 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
               className="min-h-[80px] bg-white/10 border-white/20 text-white placeholder:text-white/50"
               value={requestData.description}
               onChange={(e) => setRequestData({ ...requestData, description: e.target.value })}
-              disabled={authStep === 'code'}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category" className="text-white">Категория *</Label>
+              <Label htmlFor="category" className="text-white">Категория</Label>
               <Select
                 value={requestData.category}
                 onValueChange={(value) => setRequestData({ ...requestData, category: value })}
-                disabled={authStep === 'code'}
               >
                 <SelectTrigger id="category" className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Выберите категорию" />
@@ -566,7 +659,6 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                   placeholder="Например: 50 000"
                   value={formatBudgetDisplay(requestData.budget)}
                   onChange={(e) => handleBudgetChange(e.target.value)}
-                  disabled={authStep === 'code'}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-12"
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400 text-base">
@@ -576,44 +668,135 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city" className="text-white">Город *</Label>
-              {user ? (
-                <CityCombobox
-                  value={requestData.city}
-                  onChange={(value) => {
-                    setCityTouched(true);
-                    setRequestData({ ...requestData, city: value });
-                  }}
-                  placeholder="Выберите или введите город"
-                />
-              ) : (
-                <Select
-                  value={requestData.city}
-                  onValueChange={(value) => {
-                    setCityTouched(true);
-                    setRequestData({ ...requestData, city: value });
-                  }}
-                  disabled={authStep === 'code'}
-                >
-                  <SelectTrigger id="city" className="bg-white/10 border-white/20 text-white">
-                    <SelectValue placeholder="Выберите город" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black/40 backdrop-blur-xl border-white/10">
-                    {CITIES.map((city) => (
-                      <SelectItem key={city} value={city} className="text-white focus:bg-white/20 focus:text-white">
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="city" className="text-white">Город</Label>
+            {user ? (
+              <CityCombobox
+                value={requestData.city}
+                onChange={(value) => {
+                  setCityTouched(true);
+                  setRequestData({ ...requestData, city: value });
+                }}
+                placeholder="Выберите или введите город"
+              />
+            ) : (
+              <Select
+                value={requestData.city}
+                onValueChange={(value) => {
+                  setCityTouched(true);
+                  setRequestData({ ...requestData, city: value });
+                }}
+              >
+                <SelectTrigger id="city" className="bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="Выберите город" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/40 backdrop-blur-xl border-white/10">
+                  {CITIES.map((city) => (
+                    <SelectItem key={city} value={city} className="text-white focus:bg-white/20 focus:text-white">
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+            </>
+          )}
 
-            {!user && (
+          {!user && guestWizardStep === "contacts" && (
+            <div className="space-y-3">
+              <p className="text-sm text-white/90 text-center">
+                Так ваш запрос увидят продавцы после публикации
+              </p>
+              <RequestCard
+                id="__preview__"
+                title={requestData.title}
+                description={requestData.description}
+                category={requestData.category}
+                budget={requestData.budget}
+                location={requestData.city}
+                timeAgo="Предпросмотр"
+                offersCount={0}
+                images={images}
+                preview
+              />
+            </div>
+          )}
+
+          {(user || (!user && guestWizardStep === "contacts")) && (
+          <div className="space-y-4 p-4 bg-blue-50/10 border border-blue-200/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="subscribe-notifications"
+                checked={subscriptionData.subscribe}
+                onChange={(e) => setSubscriptionData({
+                  ...subscriptionData,
+                  subscribe: e.target.checked
+                })}
+                disabled={!user && authStep === 'code'}
+                className="rounded cursor-pointer"
+              />
+              <Label htmlFor="subscribe-notifications" className="text-white cursor-pointer">
+                Получать уведомления о новых предложениях
+              </Label>
+            </div>
+            
+            {subscriptionData.subscribe && (
+              <div className="space-y-3 mt-3 pl-6">
+                <div className="space-y-2">
+                  <Label htmlFor="notification-email" className="text-white text-sm">
+                    Email для уведомлений
+                  </Label>
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={subscriptionData.email}
+                    onChange={(e) => setSubscriptionData({
+                      ...subscriptionData,
+                      email: e.target.value
+                    })}
+                    disabled={!user && authStep === 'code'}
+                    required={subscriptionData.subscribe}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="telegram-username" className="text-white text-sm">
+                    Telegram username (необязательно)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/60">@</span>
+                    <Input
+                      id="telegram-username"
+                      type="text"
+                      placeholder="username"
+                      value={subscriptionData.telegramUsername}
+                      onChange={(e) => setSubscriptionData({
+                        ...subscriptionData,
+                        telegramUsername: e.target.value.replace('@', '')
+                      })}
+                      disabled={!user && authStep === 'code'}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    />
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Укажите ваш Telegram username для получения уведомлений в боте
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+
+          {!user && guestWizardStep === "contacts" && (
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-white">Телефон *</Label>
+                <Label htmlFor="phone" className="text-white">
+                  Телефон{" "}
+                  <span className="text-white/60 font-normal">(необязательно, для SMS-кода)</span>
+                </Label>
                 <Input
                   id="phone"
                   placeholder="+7 (999) 123-45-67"
@@ -635,12 +818,11 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 />
               </div>
-            )}
-          </div>
+          )}
 
-          {!user && authStep === 'code' && (
+          {!user && guestWizardStep === "contacts" && authStep === 'code' && (
             <div className="space-y-2">
-              <Label htmlFor="smsCode" className="text-white">Код из SMS *</Label>
+              <Label htmlFor="smsCode" className="text-white">Код из SMS</Label>
               <Input
                 id="smsCode"
                 placeholder="Введите код из SMS"
@@ -667,94 +849,56 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
             </div>
           )}
 
-          <div className="space-y-4 p-4 bg-blue-50/10 border border-blue-200/20 rounded-lg">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="subscribe-notifications"
-                checked={subscriptionData.subscribe}
-                onChange={(e) => setSubscriptionData({
-                  ...subscriptionData,
-                  subscribe: e.target.checked
-                })}
-                disabled={authStep === 'code'}
-                className="rounded cursor-pointer"
-              />
-              <Label htmlFor="subscribe-notifications" className="text-white cursor-pointer">
-                Получать уведомления о новых предложениях
-              </Label>
-            </div>
-            
-            {subscriptionData.subscribe && (
-              <div className="space-y-3 mt-3 pl-6">
-                <div className="space-y-2">
-                  <Label htmlFor="notification-email" className="text-white text-sm">
-                    Email для уведомлений *
-                  </Label>
-                  <Input
-                    id="notification-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={subscriptionData.email}
-                    onChange={(e) => setSubscriptionData({
-                      ...subscriptionData,
-                      email: e.target.value
-                    })}
-                    disabled={authStep === 'code'}
-                    required={subscriptionData.subscribe}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="telegram-username" className="text-white text-sm">
-                    Telegram username (необязательно)
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/60">@</span>
-                    <Input
-                      id="telegram-username"
-                      type="text"
-                      placeholder="username"
-                      value={subscriptionData.telegramUsername}
-                      onChange={(e) => setSubscriptionData({
-                        ...subscriptionData,
-                        telegramUsername: e.target.value.replace('@', '')
-                      })}
-                      disabled={authStep === 'code'}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                    />
-                  </div>
-                  <p className="text-xs text-white/60">
-                    Укажите ваш Telegram username для получения уведомлений в боте
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
+          {(user || (!user && guestWizardStep === "product")) && (
           <ImageUpload
             images={images}
             onImagesChange={setImages}
             maxImages={5}
             variant="transparent"
           />
+          )}
 
-          <Button 
-            type="submit" 
-            size="lg" 
-            className="w-full bg-gradient-to-r from-primary to-accent-purple hover:opacity-90 transition-opacity" 
-            disabled={loading}
-          >
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+            {!user && guestWizardStep === "contacts" && (
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={goBackToProductStep}
+                disabled={loading}
+                className="sm:w-auto border-white/30 text-white hover:bg-white/10 hover:text-white"
+              >
+                Изменить запрос
+              </Button>
+            )}
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="flex-1 w-full bg-gradient-to-r from-primary to-accent-purple hover:opacity-90 transition-opacity" 
+              disabled={loading}
+            >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {user ? "Публикация..." : (authStep === 'phone' ? "Отправка SMS..." : "Проверка кода...")}
+                {user
+                  ? "Публикация..."
+                  : guestWizardStep === "contacts" && authStep === "phone"
+                    ? "Отправка SMS..."
+                    : guestWizardStep === "contacts"
+                      ? "Проверка кода..."
+                      : "Загрузка..."}
               </>
             ) : (
-              user ? "Опубликовать запрос" : (authStep === 'phone' ? "Отправить SMS код" : "Подтвердить код и создать запрос")
+              user
+                ? "Опубликовать запрос"
+                : guestWizardStep === "product"
+                  ? "Далее: контакты и публикация"
+                  : authStep === "phone"
+                    ? "Отправить код"
+                    : "Подтвердить и опубликовать"
             )}
-          </Button>
+            </Button>
+          </div>
         </form>
         </div>
       </DialogContent>

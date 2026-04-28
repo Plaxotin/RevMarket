@@ -1,8 +1,13 @@
 import type { CSSProperties } from "react";
+import { ChevronsDown } from "lucide-react";
+
+const scrollToCatalog = () => {
+  document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
 export const Hero = () => {
   return (
-    <section className="relative overflow-hidden select-none">
+    <section className="relative overflow-hidden select-none flex items-center min-h-[240px] sm:min-h-[280px] md:min-h-[300px] py-8 md:py-10">
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div
           className="hero-orb hero-orb-blue animate-orb"
@@ -87,34 +92,27 @@ export const Hero = () => {
         />
       </div>
       
-      <div className="container relative z-10 px-4 pt-3 pb-3 mx-auto">
-        <div className="max-w-5xl mx-auto animate-slide-up">
-          <div className="mb-3">
-            <h1 className="text-4xl md:text-6xl font-black leading-none text-left">
-              <span className="bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
-                Ищешь товар?
-              </span>
-              <br />
-              <span className="text-3xl md:text-5xl text-white animate-slide-up">
-                Размести запрос!
-              </span>
-            </h1>
-          </div>
-          <div className="mt-3">
-            <h2 className="text-4xl md:text-6xl font-black leading-none text-right">
-              <span className="bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
-                Продаешь товар?
-              </span>
-              <br />
-              <span className="text-3xl md:text-5xl text-white animate-slide-up">
-                Найди покупателя!
-              </span>
-            </h2>
-          </div>
-          <div className="mt-5">
-            <p className="text-xs md:text-base text-blue-100 leading-relaxed animate-fade-in text-center">
-              Маркетплейс, где покупатели публикуют свои желания, а продавцы оставляют лучшие предложения
-            </p>
+      <div className="container relative z-10 px-4 mx-auto">
+        <div className="max-w-3xl mx-auto animate-slide-up text-center">
+          <h1 className="hero-title-shimmer text-2xl sm:text-3xl md:text-4xl font-black leading-snug tracking-tight">
+            ПОКУПАЙ НА СВОИХ УСЛОВИЯХ
+          </h1>
+          <p className="mt-3 md:mt-4 text-sm md:text-[15px] text-white/90 leading-relaxed max-w-2xl mx-auto animate-fade-in">
+            РеверсМаркет меняет привычную схему торговли: разместите, что хотите купить — и пусть продавцы сделают вам подходящее предложение.
+          </p>
+          <div className="mt-5 flex justify-center md:mt-6">
+            <button
+              type="button"
+              onClick={scrollToCatalog}
+              className="inline-flex flex-col items-center rounded-full p-1.5 text-white/80 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-0"
+              aria-label="Прокрутить к каталогу запросов"
+            >
+              <ChevronsDown
+                className="h-7 w-7 animate-bounce-slow md:h-8 md:w-8"
+                strokeWidth={2}
+                aria-hidden
+              />
+            </button>
           </div>
         </div>
       </div>

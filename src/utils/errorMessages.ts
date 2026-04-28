@@ -49,9 +49,20 @@ export const translateSupabaseError = (errorMessage: string): string => {
     return "Некорректный номер телефона";
   }
   
-  // Общие ошибки
+  // Общие ошибки / сеть (fetch к Supabase)
+  if (
+    lowerMessage.includes("failed to fetch") ||
+    lowerMessage.includes("load failed") ||
+    lowerMessage.includes("networkerror") ||
+    lowerMessage.includes("network request failed")
+  ) {
+    return "Нет ответа от Supabase. Проверьте VITE_SUPABASE_URL и ключ в .env, интернет, VPN/брандмауэр; после правок .env перезапустите npm run dev.";
+  }
   if (lowerMessage.includes('network') || lowerMessage.includes('timeout')) {
     return "Ошибка подключения. Проверьте интернет соединение";
+  }
+  if (lowerMessage.includes("anonymous") && lowerMessage.includes("disabled")) {
+    return "Включите Anonymous sign-ins в Supabase: Authentication → Providers → Anonymous.";
   }
   if (lowerMessage.includes('rate limit')) {
     return "Слишком много попыток. Подождите немного";

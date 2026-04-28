@@ -13,10 +13,9 @@ import RevMarketLogo from "../../ver6.1.svg";
 interface NavbarProps {
   onCityChange?: (city: string) => void;
   onSearchOpen?: () => void;
-  onCreateRequest?: () => void;
 }
 
-export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarProps) => {
+export const Navbar = ({ onCityChange, onSearchOpen }: NavbarProps) => {
   const [selectedCity, setSelectedCity] = useState<string>("Россия, все города");
   const [user, setUser] = useState<any>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -77,17 +76,9 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
     }
   };
 
-  const handleCreateRequest = () => {
-    if (onCreateRequest) {
-      onCreateRequest();
-    } else {
-      navigate("/create-request");
-    }
-  };
-
   return (
     <nav 
-      className="sticky top-0 z-50 backdrop-blur-md bg-black/50 relative overflow-hidden"
+      className="relative z-10 backdrop-blur-md bg-black/50 overflow-hidden"
     >
       <div className="container px-4 mx-auto relative z-10">
         <div className="flex items-center justify-between h-16">
@@ -122,7 +113,7 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
             </Button>
             
             <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="h-10 w-12 px-2 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 justify-center">
+              <SelectTrigger className="h-10 w-12 px-2 bg-transparent text-white border-white/25 hover:bg-white/10 justify-center shadow-none">
                 <MapPin className="w-5 h-5" />
               </SelectTrigger>
               <SelectContent className="bg-black/60 backdrop-blur-md border-white/10 max-h-[70vh] overflow-y-auto">
@@ -140,24 +131,17 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
             
             {user ? (
               <>
-                <Button variant="ghost" asChild className="p-2 text-white hover:bg-gray-700">
+                <Button variant="ghost" asChild className="p-2 text-white hover:bg-white/10 hover:text-white">
                   <Link to="/profile">
                     <User className="w-5 h-5" />
                   </Link>
-                </Button>
-                <Button 
-                  variant="default" 
-                  onClick={handleCreateRequest}
-                  className="px-3 bg-gray-700 hover:bg-gray-600 text-white"
-                >
-                  <span className="text-sm">Создать</span>
                 </Button>
                 <Button 
                   variant="ghost" 
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   title="Выйти из аккаунта"
-                  className="p-2 text-white hover:bg-gray-700"
+                  className="p-2 text-white hover:bg-white/10 hover:text-white"
                 >
                   <LogOut className="w-5 h-5" />
                 </Button>
@@ -173,29 +157,8 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
 
           {/* Десктопная версия - полное меню */}
           <div className="hidden md:flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => {
-                navigate("/");
-                // Trigger search open from parent
-                if (onSearchOpen) {
-                  onSearchOpen();
-                }
-                setTimeout(() => {
-                  const catalogElement = document.getElementById("catalog");
-                  if (catalogElement) {
-                    catalogElement.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
-                }, 100);
-              }}
-              className="text-white hover:bg-purple-600/30 w-10 justify-center lg:w-auto lg:justify-start lg:px-4"
-            >
-              <List className="w-5 h-5 flex-shrink-0" />
-              <span className="hidden lg:inline ml-2">Поиск по каталогу</span>
-            </Button>
-            
             <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="h-10 bg-gray-800 text-white border-gray-700 hover:bg-purple-600/30 w-12 px-2 justify-between gap-2 md:w-[220px] md:px-3">
+              <SelectTrigger className="h-10 w-12 bg-transparent px-2 text-white border-white/25 shadow-none hover:bg-white/10 justify-between gap-2 md:w-[220px] md:px-3">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="hidden md:flex flex-1 items-center justify-center text-center truncate px-1">
                   {selectedCity}
@@ -216,25 +179,18 @@ export const Navbar = ({ onCityChange, onSearchOpen, onCreateRequest }: NavbarPr
             
             {user ? (
               <>
-                <Button variant="ghost" asChild className="text-white hover:bg-gray-700">
+                <Button variant="ghost" asChild className="text-white hover:bg-white/10 hover:text-white">
                   <Link to="/profile">
                     <User className="w-5 h-5" />
                     Личный кабинет
                   </Link>
                 </Button>
                 <Button 
-                  variant="default" 
-                  onClick={handleCreateRequest}
-                  className="bg-gray-700 hover:bg-gray-600 text-white"
-                >
-                  Создать запрос
-                </Button>
-                <Button 
                   variant="ghost" 
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   title="Выйти из аккаунта"
-                  className="text-white hover:bg-gray-700"
+                  className="text-white hover:bg-white/10 hover:text-white"
                 >
                   <LogOut className="w-5 h-5" />
                   {isLoggingOut && <span className="ml-2">Выход...</span>}

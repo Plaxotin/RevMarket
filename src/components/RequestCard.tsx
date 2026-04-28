@@ -19,6 +19,8 @@ interface RequestCardProps {
   userId?: string;
   currentUserId?: string;
   images?: string[];
+  /** Статичная карточка без ссылки (черновик в форме) */
+  preview?: boolean;
 }
 
 const categoryConfig: Record<string, { 
@@ -175,6 +177,7 @@ export const RequestCard = ({
   userId,
   currentUserId,
   images,
+  preview = false,
 }: RequestCardProps) => {
   const config = useMemo(() => categoryConfig[category] || categoryConfig.default, [category]);
   const isOwner = userId && currentUserId && userId === currentUserId;
@@ -184,6 +187,7 @@ export const RequestCard = ({
 
   // Проверяем, добавлена ли карточка в избранное
   useEffect(() => {
+    if (preview) return;
     const checkFavorite = async () => {
       if (currentUserId && !isOwner) {
         const { data, error } = await supabase
@@ -196,7 +200,7 @@ export const RequestCard = ({
       }
     };
     checkFavorite();
-  }, [currentUserId, id, isOwner]);
+  }, [currentUserId, id, isOwner, preview]);
 
   const toggleFavorite = async () => {
     if (!currentUserId || isOwner) return;
@@ -240,19 +244,19 @@ export const RequestCard = ({
     }
   };
   
-  return (
-    <Link to={`/request/${id}`} className="block h-full">
+  const card = (
       <Card 
-        className={`group bg-gradient-to-br ${config.bgGradient} ${config.borderColor} border rounded-2xl hover:shadow-lg transition-all duration-300 animate-fade-in flex flex-col h-full relative cursor-pointer overflow-hidden`}
+        className={`group bg-gradient-to-br ${config.bgGradient} ${config.borderColor} border rounded-2xl ${preview ? "" : "hover:shadow-lg cursor-pointer"} transition-all duration-300 animate-fade-in flex flex-col h-full relative overflow-hidden ${preview ? "ring-2 ring-primary/40" : ""}`}
       >
-        {/* Overlay при наведении */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
+        {!preview && (
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center pointer-events-none">
           <div className="bg-black/40 backdrop-blur-sm px-1 py-0.5 rounded">
             <span className="text-white text-[13.68px] font-normal">Посмотреть</span>
           </div>
         </div>
+        )}
         {/* Кнопка избранного в правом верхнем углу */}
-        {currentUserId && !isOwner && (
+        {!preview && currentUserId && !isOwner && (
           <Button
             variant="ghost"
             size="icon"
@@ -338,6 +342,19 @@ export const RequestCard = ({
         )}
       </CardContent>
     </Card>
+  );
+
+  if (preview) {
+    return (
+      <div className="block h-full max-w-md mx-auto">
+        {card}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={`/request/${id}`} className="block h-full">
+      {card}
     </Link>
   );
 };

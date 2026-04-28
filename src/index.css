@@ -163,6 +163,36 @@ All colors MUST be HSL.
     animation: scaleIn 0.3s ease-out;
   }
 
+  /** Переливание букв заголовка херо (градиент + сдвиг фона) */
+  .hero-title-shimmer {
+    color: transparent;
+    background-image: linear-gradient(
+      105deg,
+      hsl(0 0% 100%) 0%,
+      hsl(210 100% 92%) 22%,
+      hsl(280 90% 94%) 40%,
+      hsl(195 95% 90%) 58%,
+      hsl(330 95% 94%) 75%,
+      hsl(0 0% 100%) 92%,
+      hsl(262 100% 92%) 100%
+    );
+    background-size: 260% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: heroTitleShimmer 7s ease-in-out infinite;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title-shimmer {
+      animation: none;
+      color: hsl(0 0% 100%);
+      background-image: none;
+      -webkit-background-clip: border-box;
+      background-clip: border-box;
+    }
+  }
+
   .hero-orb {
     @apply absolute rounded-full mix-blend-screen blur-2xl;
     opacity: 0.6;
@@ -245,6 +275,16 @@ All colors MUST be HSL.
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+@keyframes heroTitleShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
 }
 

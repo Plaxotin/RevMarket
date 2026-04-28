@@ -90,7 +90,7 @@ const CreateRequest = () => {
 
     setLoading(true);
 
-    const { error } = await supabase
+    const { data: inserted, error } = await supabase
       .from("requests")
       .insert([
         {
@@ -102,7 +102,9 @@ const CreateRequest = () => {
           city: formData.city || null,
           images: images.length > 0 ? images : null,
         },
-      ]);
+      ])
+      .select("id")
+      .single();
 
     if (error) {
       toast({
@@ -110,12 +112,12 @@ const CreateRequest = () => {
         description: "Не удалось создать запрос: " + translateSupabaseError(error.message),
         variant: "destructive",
       });
-    } else {
+    } else if (inserted?.id) {
       toast({
         title: "Успешно!",
-        description: "Запрос успешно создан",
+        description: "Запрос создан",
       });
-      navigate("/");
+      navigate(`/request/${inserted.id}`);
     }
 
     setLoading(false);

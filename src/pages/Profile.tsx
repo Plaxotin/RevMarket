@@ -335,27 +335,52 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar onCityChange={() => {}} />
-        <div className="container px-4 py-16 mx-auto flex justify-center">
-          <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen relative">
+        <div
+          className="fixed inset-0 z-0 bg-gradient-hero opacity-90"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))",
+          }}
+        />
+        <div className="relative z-10">
+          <Navbar onCityChange={() => {}} />
+          <div className="container px-4 py-16 mx-auto flex justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container px-4 py-16 mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Личный кабинет</h1>
+    <div className="min-h-screen relative">
+      <div
+        className="fixed inset-0 z-0 bg-gradient-hero opacity-90"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(262 83% 58%), hsl(220 90% 56%), hsl(330 81% 60%))",
+        }}
+      />
+      <div className="relative z-10">
+        <Navbar onCityChange={() => {}} />
+        <div className="container px-4 py-16 mx-auto">
+        <h1 className="text-3xl font-bold mb-8 text-white">Личный кабинет</h1>
         
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="requests">Мои запросы ({myRequests.length})</TabsTrigger>
-            <TabsTrigger value="offers">Мои предложения ({myOffers.length})</TabsTrigger>
-            <TabsTrigger value="favorites">Избранное ({favoriteRequests.length})</TabsTrigger>
-            <TabsTrigger value="settings">Настройки</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-black/40 backdrop-blur-md border border-white/15">
+            <TabsTrigger value="requests" className="text-white/85 data-[state=active]:bg-white data-[state=active]:text-foreground">
+              Мои запросы ({myRequests.length})
+            </TabsTrigger>
+            <TabsTrigger value="offers" className="text-white/85 data-[state=active]:bg-white data-[state=active]:text-foreground">
+              Мои предложения ({myOffers.length})
+            </TabsTrigger>
+            <TabsTrigger value="favorites" className="text-white/85 data-[state=active]:bg-white data-[state=active]:text-foreground">
+              Избранное ({favoriteRequests.length})
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-white/85 data-[state=active]:bg-white data-[state=active]:text-foreground">
+              Настройки
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="requests" className="mt-6">
@@ -543,6 +568,7 @@ const Profile = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );

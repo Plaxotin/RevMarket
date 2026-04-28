@@ -6,12 +6,11 @@ import { useState, useRef, useEffect } from "react";
 interface StickyActionsProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onSearchOpen?: () => void;
   triggerSearchOpen?: number;
   onCreateRequest?: () => void;
 }
 
-export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, triggerSearchOpen, onCreateRequest }: StickyActionsProps) => {
+export const StickyActions = ({ searchQuery, onSearchChange, triggerSearchOpen, onCreateRequest }: StickyActionsProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -21,26 +20,6 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
       setIsSearchOpen(true);
     }
   }, [triggerSearchOpen]);
-
-  const handleSearchClick = () => {
-    // Scroll to catalog first
-    const catalogElement = document.getElementById("catalog");
-    if (catalogElement) {
-      catalogElement.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    // Open search after a short delay to ensure scroll happens
-    setTimeout(() => {
-      setIsSearchOpen(true);
-      // Notify parent component that search is opened
-      if (onSearchOpen) {
-        onSearchOpen();
-      }
-      // Focus on the search input after it becomes visible
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
-    }, 100);
-  };
 
   useEffect(() => {
     // Also focus when search is opened from Navbar
@@ -64,7 +43,7 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
   };
 
   return (
-    <div className="sticky top-16 z-40 backdrop-blur-md bg-black/50 border-b border-border/40 shadow-lg relative overflow-hidden">
+    <div className="sticky top-0 z-50 backdrop-blur-md bg-black/50 border-b border-border/40 shadow-lg relative overflow-hidden">
       <div className="container px-6 py-3 mx-auto max-w-5xl relative z-10">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch">
           <Button 
@@ -73,21 +52,11 @@ export const StickyActions = ({ searchQuery, onSearchChange, onSearchOpen, trigg
             className="group shadow-lg w-full sm:w-auto sm:min-w-[200px]"
             onClick={handleCreateRequestClick}
           >
-            Ищу товар
+            Создать запрос
             <CirclePlus className="w-[20px] h-[20px] ml-2" />
           </Button>
-          
-          {!isSearchOpen ? (
-            <Button 
-              variant="hero-sell" 
-              size="lg"
-              onClick={handleSearchClick}
-              className="group shadow-lg w-full sm:w-auto sm:min-w-[200px]"
-            >
-              Ищу покупателя
-              <Search className="w-5 h-5 ml-2" />
-            </Button>
-          ) : (
+
+          {isSearchOpen && (
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input

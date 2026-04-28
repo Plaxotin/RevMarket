@@ -8,15 +8,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X, CheckCircle } from "lucide-react";
+import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X, CheckCircle, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { checkAuth } from "@/utils/auth";
 import { formatPrice } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CityCombobox } from "@/components/CityCombobox";
+import { ImageUpload } from "@/components/ImageUpload";
+import { CATEGORIES } from "@/data/categories";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { BuyerContacts } from "@/components/BuyerContacts";
 import { ReportButton } from "@/components/ReportButton";
+
+/** Форма «Сделать предложение» и сайдбар продавца скрыты — позже отдельный интерфейс для авторизованных продавцов. Поставьте true, чтобы вернуть блок. */
+const SHOW_OFFER_SIDEBAR = false;
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -53,13 +66,50 @@ const RequestDetail = () => {
     phone: "",
     email: "",
   });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    budget: "",
+    city: "",
+    deadline: "",
+    images: [] as string[],
+  });
+
+  const formatEditBudgetDisplay = (value: string) => {
+    if (!value) return "";
+    return formatPrice(value);
+  };
+
+  const handleEditBudgetChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setEditForm((prev) => ({ ...prev, budget: digitsOnly }));
+  };
+
   useEffect(() => {
     loadData();
   }, [id]);
 
-  // Auto-focus on company input if coming from catalog
   useEffect(() => {
-    const shouldFocus = new URLSearchParams(location.search).get('focus') === 'true';
+    if (!editOpen || !request) return;
+    setEditForm({
+      title: request.title ?? "",
+      description: request.description ?? "",
+      category: request.category ?? "",
+      budget: request.budget ? String(request.budget).replace(/\D/g, "") : "",
+      city: request.city ?? "",
+      deadline: request.deadline ?? "",
+      images: Array.isArray(request.images) ? [...request.images] : [],
+    });
+    // только при открытии модалки, чтобы правки не сбрасывались при обновлении request
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOpen]);
+
+  useEffect(() => {
+    if (!SHOW_OFFER_SIDEBAR) return;
+    const shouldFocus = new URLSearchParams(location.search).get("focus") === "true";
     if (shouldFocus && companyInputRef.current && user) {
       setTimeout(() => {
         companyInputRef.current?.focus();
@@ -316,6 +366,72 @@ const RequestDetail = () => {
     setSubmitting(false);
   };
 
+  const handleSaveRequestEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !request || user.id !== request.user_id || !id) return;
+
+    const title = editForm.title.trim();
+    const description = editForm.description.trim();
+    if (!title || !description || !editForm.category) {
+      toast({
+        title: "Заполните поля",
+        description: "Нужны название, описание и категория",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .update({
+          title,
+          description,
+          category: editForm.category,
+          budget: editForm.budget.trim() || null,
+          city: editForm.city.trim() || null,
+          deadline: editForm.deadline.trim() || null,
+          images: editForm.images.length > 0 ? editForm.images : null,
+        })
+        .eq("id", id);
+
+      if (error) {
+        toast({
+          title: "Ошибка",
+          description: translateSupabaseError(error.message),
+          variant: "destructive",
+        });
+      } else {
+        setRequest((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                title,
+                description,
+                category: editForm.category,
+                budget: editForm.budget.trim() || null,
+                city: editForm.city.trim() || null,
+                deadline: editForm.deadline.trim() || null,
+                images: editForm.images.length > 0 ? editForm.images : null,
+              }
+            : prev
+        );
+        toast({
+          title: "Сохранено",
+          description: "Запрос обновлён",
+        });
+        setEditOpen(false);
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditOpen(false);
+  };
+
   const handleDeleteRequest = async () => {
     if (!user || !request || user.id !== request.user_id) {
       return;
@@ -464,110 +580,272 @@ const RequestDetail = () => {
         <div className="flex flex-row gap-6 overflow-x-auto items-stretch">
           <div className="flex-1 min-w-0 flex flex-col gap-6">
             <Card className="shadow-card animate-slide-up">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <Badge variant="secondary">{request.category}</Badge>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      {getTimeAgo(request.created_at)}
-                    </div>
-                    {user && user.id === request.user_id && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDeleteRequest}
-                        disabled={submitting}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Удалить запрос
-                      </Button>
-                    )}
-                    {user && user.id !== request.user_id && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleToggleFavorite}
-                          title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
-                        >
-                          <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
-                        </Button>
-                        <ReportButton
-                          targetType="request"
-                          targetId={request.id}
-                          currentUserId={user?.id}
-                          variant="ghost"
-                          size="icon"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <CardTitle className="text-3xl">{request.title}</CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2">
-                  <div className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    <span>{Array.isArray(request.profiles) && request.profiles.length > 0 ? request.profiles[0].name : request.profiles?.name || "Аноним"}</span>
-                  </div>
-                  {request.city && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{request.city}</span>
-                    </div>
-                  )}
-                  {request.budget && (
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold text-foreground">{formatPrice(request.budget)} ₽</span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-base leading-relaxed mb-4">{request.description}</p>
-                {request.deadline && (
-                  <p className="text-sm text-muted-foreground mb-4">
-                    <span className="font-semibold">Срок:</span> {request.deadline}
-                  </p>
-                )}
-                
-                {/* Сноска о подписке на уведомления */}
-                {user && user.id === request.user_id && isSubscribed && (
-                  <div className="mb-4 p-3 bg-green-50/10 border border-green-200/20 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-green-200">
-                        Вы подписаны на уведомления о новых предложениях на выбранные каналы (email и/или Telegram, в зависимости от настроек сервиса).
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Отображение изображений */}
-                {request.images && request.images.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
-                      Фотографии ({request.images.length})
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {request.images.map((image: string, index: number) => (
-                        <div 
-                          key={index} 
-                          className="relative aspect-square overflow-hidden rounded-lg border border-border hover:opacity-90 transition-opacity cursor-pointer group"
-                          onClick={() => openImageModal(index)}
-                        >
-                          <img
-                            src={image}
-                            alt={`${request.title} - изображение ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+              {user?.id === request.user_id && editOpen ? (
+                <form onSubmit={handleSaveRequestEdit}>
+                  <CardHeader className="gap-4 space-y-0">
+                    {isSubscribed && (
+                      <div className="mb-2 rounded-lg border border-green-200/20 bg-green-50/10 p-3">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                          <p className="text-sm text-green-200">
+                            Вы подписаны на уведомления о новых предложениях на выбранные каналы (email и/или Telegram, в зависимости от настроек сервиса).
+                          </p>
                         </div>
-                      ))}
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Label htmlFor="inline-edit-title" className="text-muted-foreground">
+                          Название
+                        </Label>
+                        <Input
+                          id="inline-edit-title"
+                          value={editForm.title}
+                          onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                          required
+                          className="border-border bg-background text-xl font-semibold leading-tight md:text-2xl"
+                        />
+                      </div>
+                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          disabled={editSaving}
+                        >
+                          Отмена
+                        </Button>
+                        <Button type="submit" disabled={editSaving}>
+                          {editSaving ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Сохранение...
+                            </>
+                          ) : (
+                            "Сохранить"
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
+                    <div className="space-y-2">
+                      <Label htmlFor="inline-edit-description">Описание</Label>
+                      <Textarea
+                        id="inline-edit-description"
+                        value={editForm.description}
+                        onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                        required
+                        className="min-h-[140px] border-border bg-background"
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="inline-edit-category">Категория</Label>
+                        <Select
+                          value={editForm.category}
+                          onValueChange={(value) => setEditForm((p) => ({ ...p, category: value }))}
+                        >
+                          <SelectTrigger id="inline-edit-category">
+                            <SelectValue placeholder="Выберите категорию" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORIES.map((cat) => (
+                              <SelectItem key={cat} value={cat}>
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inline-edit-budget">Бюджет</Label>
+                        <div className="relative">
+                          <Input
+                            id="inline-edit-budget"
+                            inputMode="numeric"
+                            placeholder="Например: 50 000"
+                            value={formatEditBudgetDisplay(editForm.budget)}
+                            onChange={(e) => handleEditBudgetChange(e.target.value)}
+                            className="border-border bg-background pr-10"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted-foreground">
+                            ₽
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="inline-edit-city">Город</Label>
+                        <CityCombobox
+                          value={editForm.city}
+                          onChange={(value) => setEditForm((p) => ({ ...p, city: value }))}
+                          placeholder="Город или регион"
+                        />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="inline-edit-deadline">Срок (необязательно)</Label>
+                        <Input
+                          id="inline-edit-deadline"
+                          value={editForm.deadline}
+                          onChange={(e) => setEditForm((p) => ({ ...p, deadline: e.target.value }))}
+                          placeholder="Например: до 15 мая"
+                          className="border-border bg-background"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Фотографии</Label>
+                      <ImageUpload
+                        images={editForm.images}
+                        onImagesChange={(imgs) => setEditForm((p) => ({ ...p, images: imgs }))}
+                        maxImages={5}
+                      />
+                    </div>
+                  </CardHeader>
+                </form>
+              ) : (
+                <>
+                  <CardHeader className="gap-4 space-y-0">
+                    <div className="flex min-h-[3rem] items-center justify-between gap-4">
+                      <CardTitle className="min-w-0 flex-1 pr-2 text-3xl leading-tight">{request.title}</CardTitle>
+                      {user && (
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+                          {user.id === request.user_id && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setEditOpen(true)}
+                                disabled={submitting || editSaving}
+                                className="h-12 w-12 shrink-0 border-border"
+                                aria-label="Редактировать"
+                                title="Редактировать"
+                              >
+                                <Pencil className="h-6 w-6" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleDeleteRequest}
+                                disabled={submitting}
+                                className="h-12 w-12 shrink-0 border-border"
+                                aria-label="Удалить запрос"
+                                title="Удалить запрос"
+                              >
+                                <Trash2 className="h-6 w-6 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                          {user.id !== request.user_id && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleToggleFavorite}
+                                className={`h-12 w-12 shrink-0 text-muted-foreground hover:bg-transparent hover:text-destructive [&_svg]:h-[1.725rem] [&_svg]:w-[1.725rem] [&_svg]:shrink-0 ${isFavorite ? "text-red-500 hover:bg-transparent hover:text-red-600" : ""}`}
+                                title={isFavorite ? "Удалить из избранного" : "Добавить в избранное"}
+                              >
+                                <Heart
+                                  className={
+                                    isFavorite ? "fill-red-500 text-red-500" : ""
+                                  }
+                                />
+                              </Button>
+                              <ReportButton
+                                targetType="request"
+                                targetId={request.id}
+                                currentUserId={user?.id}
+                                variant="ghost"
+                                size="icon"
+                                className="h-12 w-12 shrink-0 [&_svg]:h-6 [&_svg]:w-6"
+                              />
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-base leading-relaxed">{request.description}</p>
+                    <div className="mt-6 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+                      {request.budget && (
+                        <>
+                          <span className="shrink-0 text-lg font-semibold leading-tight text-foreground">
+                            {formatPrice(request.budget)} ₽
+                          </span>
+                          <span className="text-muted-foreground/50 shrink-0 select-none" aria-hidden>
+                            ·
+                          </span>
+                        </>
+                      )}
+                      <div className="flex min-w-0 items-center gap-1">
+                        <User className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {Array.isArray(request.profiles) && request.profiles.length > 0
+                            ? request.profiles[0].name
+                            : request.profiles?.name || "Аноним"}
+                        </span>
+                      </div>
+                      {request.city ? (
+                        <>
+                          <span className="text-muted-foreground/50 shrink-0 select-none" aria-hidden>
+                            ·
+                          </span>
+                          <div className="flex min-w-0 items-center gap-1">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{request.city}</span>
+                          </div>
+                        </>
+                      ) : null}
+                      <span className="text-muted-foreground/50 shrink-0 select-none" aria-hidden>
+                        ·
+                      </span>
+                      <span className="truncate">{request.category}</span>
+                      <span className="text-muted-foreground/50 shrink-0 select-none" aria-hidden>
+                        ·
+                      </span>
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span className="shrink-0">{getTimeAgo(request.created_at)}</span>
+                    </div>
+                  </CardHeader>
+                  {((user && user.id === request.user_id && isSubscribed) ||
+                    (request.images && request.images.length > 0)) && (
+                    <CardContent>
+                      {user && user.id === request.user_id && isSubscribed && (
+                        <div className="mb-4 rounded-lg border border-green-200/20 bg-green-50/10 p-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
+                            <p className="text-sm text-green-200">
+                              Вы подписаны на уведомления о новых предложениях на выбранные каналы (email и/или
+                              Telegram, в зависимости от настроек сервиса).
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {request.images && request.images.length > 0 && (
+                        <div className={user && user.id === request.user_id && isSubscribed ? "mt-6" : ""}>
+                          <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                            Фотографии ({request.images.length})
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            {request.images.map((image: string, index: number) => (
+                              <div
+                                key={index}
+                                className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-border transition-opacity hover:opacity-90"
+                                onClick={() => openImageModal(index)}
+                              >
+                                <img
+                                  src={image}
+                                  alt={`${request.title} - изображение ${index + 1}`}
+                                  className="h-full w-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </>
+              )}
             </Card>
 
             <Card className="shadow-card animate-fade-in flex-1 flex flex-col min-h-0">
@@ -580,7 +858,7 @@ const RequestDetail = () => {
               <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
                 {offers.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    Пока нет предложений. Будьте первым!
+                    Пока нет предложений
                   </p>
                 ) : (
                   offers.map((offer) => (
@@ -652,6 +930,7 @@ const RequestDetail = () => {
             </Card>
           </div>
 
+          {SHOW_OFFER_SIDEBAR && (
           <div className="flex-1 min-w-[280px] flex flex-col min-h-0 lg:max-w-md">
             <Card className="shadow-card sticky top-6 animate-scale-in flex-1 flex flex-col w-full min-h-0">
               <CardHeader className="flex-shrink-0">
@@ -676,7 +955,7 @@ const RequestDetail = () => {
                     return (
                       <form onSubmit={handleSubmitOffer} className="space-y-4 flex-1 flex flex-col">
                   <div className="space-y-2">
-                    <Label htmlFor="company">Компания/Имя *</Label>
+                    <Label htmlFor="company">Компания/Имя</Label>
                     <Input
                       ref={companyInputRef}
                       id="company"
@@ -688,7 +967,7 @@ const RequestDetail = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="price">Ваша цена *</Label>
+                    <Label htmlFor="price">Ваша цена</Label>
                     <Input
                       id="price"
                       placeholder="Например: 75 000 ₽"
@@ -700,7 +979,7 @@ const RequestDetail = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm">Телефон *</Label>
+                      <Label htmlFor="phone" className="text-sm">Телефон</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -726,7 +1005,7 @@ const RequestDetail = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="offer-description">Описание *</Label>
+                    <Label htmlFor="offer-description">Описание</Label>
                     <Textarea
                       id="offer-description"
                       placeholder="Опишите ваше предложение..."
@@ -749,7 +1028,7 @@ const RequestDetail = () => {
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="space-y-4 opacity-50 pointer-events-none flex-1">
                       <div className="space-y-2">
-                        <Label htmlFor="company-disabled">Компания/Имя *</Label>
+                        <Label htmlFor="company-disabled">Компания/Имя</Label>
                         <Input
                           id="company-disabled"
                           placeholder="Войдите, чтобы заполнить"
@@ -758,7 +1037,7 @@ const RequestDetail = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="price-disabled">Ваша цена *</Label>
+                        <Label htmlFor="price-disabled">Ваша цена</Label>
                         <Input
                           id="price-disabled"
                           placeholder="Войдите, чтобы заполнить"
@@ -768,7 +1047,7 @@ const RequestDetail = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="phone-disabled" className="text-sm">Телефон *</Label>
+                          <Label htmlFor="phone-disabled" className="text-sm">Телефон</Label>
                           <Input
                             id="phone-disabled"
                             placeholder="Войдите, чтобы заполнить"
@@ -789,7 +1068,7 @@ const RequestDetail = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="offer-description-disabled">Описание *</Label>
+                        <Label htmlFor="offer-description-disabled">Описание</Label>
                         <Textarea
                           id="offer-description-disabled"
                           placeholder="Войдите, чтобы заполнить"
@@ -821,6 +1100,8 @@ const RequestDetail = () => {
               hasUserOffer={!!offers.find((o: any) => o.user_id === user?.id)}
             />
           </div>
+          )}
+        </div>
         </div>
       </div>
 
@@ -873,7 +1154,6 @@ const RequestDetail = () => {
           </DialogContent>
         </Dialog>
       )}
-      </div>
     </div>
   );
 };

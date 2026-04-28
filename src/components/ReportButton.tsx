@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface ReportButtonProps {
   /** What is being reported */
@@ -32,6 +33,8 @@ interface ReportButtonProps {
   variant?: "ghost" | "outline";
   /** Size */
   size?: "sm" | "icon" | "default";
+  /** Merged onto the trigger button (e.g. fixed icon dimensions) */
+  className?: string;
 }
 
 const REPORT_REASONS = [
@@ -48,6 +51,7 @@ export const ReportButton = ({
   currentUserId,
   variant = "ghost",
   size = "sm",
+  className,
 }: ReportButtonProps) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -133,11 +137,14 @@ export const ReportButton = ({
         <Button
           variant={variant}
           size={size}
-          className="text-muted-foreground hover:text-destructive"
+          className={cn(
+            "text-muted-foreground hover:bg-transparent hover:text-destructive",
+            className,
+          )}
           title="Пожаловаться"
           aria-label="Пожаловаться"
         >
-          <Flag className="w-4 h-4" />
+          <Flag className={size === "icon" ? "h-6 w-6" : "h-4 w-4"} />
           {size !== "icon" && <span className="ml-1">Пожаловаться</span>}
         </Button>
       </DialogTrigger>

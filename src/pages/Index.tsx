@@ -64,21 +64,12 @@ const Index = () => {
     setCurrentUser(user);
   };
 
-  const handleCreateFirstRequest = () => {
-    setCreateRequestDialogOpen(true);
-  };
-
   const loadRequests = async (retryCount = 0) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("requests")
-        .select(`
-          *,
-          profiles!requests_user_id_fkey (
-            name
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -119,19 +110,25 @@ const Index = () => {
     }
     setLoading(false);
   };
-  
+
+  const cityMatchesFilter = (reqCity: string | null | undefined, filterCity: string) => {
+    if (filterCity === "Россия, все города") return true;
+    const a = (reqCity ?? "").trim().toLowerCase();
+    const b = filterCity.trim().toLowerCase();
+    if (!a) return true;
+    return a === b || a.includes(b) || b.includes(a);
+  };
+
   const filteredRequests = requests
     .filter(req => selectedCategory === "Все" || req.category === selectedCategory)
-    .filter(req => 
-      selectedCity === "Россия, все города" || 
-      req.city === selectedCity ||
-      !req.city // Показываем запросы без указанного города при выборе "Россия, все города"
-    )
-    .filter(req => 
-      searchQuery === "" || 
-      req.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    .filter(req => cityMatchesFilter(req.city, selectedCity))
+    .filter(req => {
+      if (searchQuery === "") return true;
+      const q = searchQuery.toLowerCase();
+      const title = (req.title ?? "").toLowerCase();
+      const desc = (req.description ?? "").toLowerCase();
+      return title.includes(q) || desc.includes(q);
+    });
   
   return (
     <div className="min-h-screen relative">
@@ -143,13 +140,11 @@ const Index = () => {
         <Navbar 
           onCityChange={setSelectedCity} 
           onSearchOpen={handleOpenSearch}
-          onCreateRequest={handleOpenCreateRequest}
         />
         <Hero />
         <StickyActions 
           searchQuery={searchQuery} 
           onSearchChange={setSearchQuery} 
-          onSearchOpen={handleOpenSearch} 
           triggerSearchOpen={searchOpenTrigger}
           onCreateRequest={handleOpenCreateRequest}
         />
@@ -161,7 +156,7 @@ const Index = () => {
           initialCity={selectedCity}
         />
         
-        <section id="catalog" className="w-full scroll-mt-[120px] relative z-20">
+        <section id="catalog" className="w-full scroll-mt-20 md:scroll-mt-24 relative z-20">
         <div className="bg-black/60 backdrop-blur-md rounded-[40px] mt-8 pt-12 pb-4 mx-3 mb-4">
           <div className="container px-4 mx-auto">
             <div className="mb-12 text-center animate-fade-in select-none">
@@ -224,16 +219,9 @@ const Index = () => {
                   <h3 className="text-2xl font-bold text-white mb-4">
                     Запросов пока нет
                   </h3>
-                  <p className="text-lg text-white/90 mb-8 max-w-md mx-auto">
+                  <p className="text-lg text-white/90 max-w-md mx-auto">
                     Создайте первый запрос и начните получать предложения от продавцов!
                   </p>
-                  <Button 
-                    size="lg" 
-                    onClick={handleCreateFirstRequest}
-                    className="bg-gradient-to-r from-primary to-accent-purple text-white hover:shadow-lg hover:scale-105 transition-all duration-300"
-                  >
-                    {currentUser ? "Создать первый запрос" : "Создание запроса и регистрация"}
-                  </Button>
                 </div>
                 
                 {/* Дополнительное пространство для предотвращения скролла */}

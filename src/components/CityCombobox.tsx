@@ -39,9 +39,19 @@ interface CityComboboxProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Доп. классы для кнопки-триггера (например стеклянный стиль в тёмном диалоге) */
+  triggerClassName?: string;
+  /** Доп. классы для выпадающего контента */
+  contentClassName?: string;
 }
 
-export const CityCombobox = ({ value, onChange, placeholder = "Выберите или введите город" }: CityComboboxProps) => {
+export const CityCombobox = ({
+  value,
+  onChange,
+  placeholder = "Выберите или введите город",
+  triggerClassName,
+  contentClassName,
+}: CityComboboxProps) => {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
 
@@ -71,13 +81,16 @@ export const CityCombobox = ({ value, onChange, placeholder = "Выберите 
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className={cn("w-full justify-between", triggerClassName)}
         >
           {value || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className={cn("w-[var(--radix-popover-trigger-width)] p-0", contentClassName)}
+        align="start"
+      >
         <Command>
           <CommandInput 
             placeholder="Поиск города..." 
