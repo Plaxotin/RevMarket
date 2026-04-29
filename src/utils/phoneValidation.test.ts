@@ -28,6 +28,7 @@ describe("phoneValidation utilities", () => {
       expect(normalizePhone("")).toBeNull();
       expect(normalizePhone("12345")).toBeNull();
       expect(normalizePhone("+7900123456")).toBeNull();
+      expect(normalizePhone("++79001234567")).toBeNull();
       expect(normalizePhone((null as unknown) as string)).toBeNull();
     });
   });
@@ -35,6 +36,13 @@ describe("phoneValidation utilities", () => {
   describe("validateRussianPhone", () => {
     it("returns error when phone is empty", () => {
       expect(validateRussianPhone("")).toEqual({
+        valid: false,
+        error: "Введите номер телефона",
+      });
+    });
+
+    it("returns error when phone contains only whitespace", () => {
+      expect(validateRussianPhone("   ")).toEqual({
         valid: false,
         error: "Введите номер телефона",
       });
@@ -61,6 +69,13 @@ describe("phoneValidation utilities", () => {
         normalized: "+79001234567",
       });
     });
+
+    it("accepts landline-like codes included in the supported ranges", () => {
+      expect(validateRussianPhone("+73001234567")).toEqual({
+        valid: true,
+        normalized: "+73001234567",
+      });
+    });
   });
 
   describe("formatPhoneDisplay", () => {
@@ -76,6 +91,10 @@ describe("phoneValidation utilities", () => {
   describe("handlePhoneInput", () => {
     it("formats 8-prefixed input into display format", () => {
       expect(handlePhoneInput("8 (900) 123-45-67")).toBe("+7 (900) 123-45-67");
+    });
+
+    it("formats 7-prefixed input without plus", () => {
+      expect(handlePhoneInput("79001234567")).toBe("+7 (900) 123-45-67");
     });
 
     it("formats 10-digit mobile input starting with 9", () => {
