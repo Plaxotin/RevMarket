@@ -75,14 +75,21 @@ serve(async (req) => {
 
     const { data: subscription } = await admin
       .from("notification_subscriptions")
-      .select("email, telegram_username")
+      .select("email, telegram_username, seller_offers_enabled, digest_frequency")
       .eq("user_id", request.user_id)
       .eq("is_active", true)
       .single();
 
-    if (!subscription) {
+    if (!subscription || subscription.seller_offers_enabled === false) {
       return new Response(
-        JSON.stringify({ success: true, message: "User not subscribed" }),
+        JSON.stringify({ success: true, message: "User not subscribed to seller offers" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (subscription.digest_frequency === "daily") {
+      return new Response(
+        JSON.stringify({ success: true, message: "Daily digest selected; instant seller notification skipped" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

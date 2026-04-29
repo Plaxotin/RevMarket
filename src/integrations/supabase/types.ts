@@ -149,6 +149,10 @@ export type Database = {
           email: string
           telegram_username: string | null
           is_active: boolean
+          sms_enabled: boolean
+          ai_results_enabled: boolean
+          seller_offers_enabled: boolean
+          digest_frequency: string
           created_at: string | null
           updated_at: string | null
         }
@@ -158,6 +162,10 @@ export type Database = {
           email: string
           telegram_username?: string | null
           is_active?: boolean
+          sms_enabled?: boolean
+          ai_results_enabled?: boolean
+          seller_offers_enabled?: boolean
+          digest_frequency?: string
           created_at?: string | null
           updated_at?: string | null
         }
@@ -167,6 +175,10 @@ export type Database = {
           email?: string
           telegram_username?: string | null
           is_active?: boolean
+          sms_enabled?: boolean
+          ai_results_enabled?: boolean
+          seller_offers_enabled?: boolean
+          digest_frequency?: string
           created_at?: string | null
           updated_at?: string | null
         }
@@ -209,6 +221,11 @@ export type Database = {
       }
       requests: {
         Row: {
+          ai_mode: string
+          ai_search_completed_at: string | null
+          ai_search_started_at: string | null
+          ai_search_status: string
+          ai_summary: string | null
           budget: string | null
           category: string
           city: string | null
@@ -216,11 +233,17 @@ export type Database = {
           deadline: string | null
           description: string
           id: string
+          seller_visibility_status: string
           title: string
           user_id: string
           images: string[] | null
         }
         Insert: {
+          ai_mode?: string
+          ai_search_completed_at?: string | null
+          ai_search_started_at?: string | null
+          ai_search_status?: string
+          ai_summary?: string | null
           budget?: string | null
           category: string
           city?: string | null
@@ -228,11 +251,17 @@ export type Database = {
           deadline?: string | null
           description: string
           id?: string
+          seller_visibility_status?: string
           title: string
           user_id: string
           images?: string[] | null
         }
         Update: {
+          ai_mode?: string
+          ai_search_completed_at?: string | null
+          ai_search_started_at?: string | null
+          ai_search_status?: string
+          ai_summary?: string | null
           budget?: string | null
           category?: string
           city?: string | null
@@ -240,6 +269,7 @@ export type Database = {
           deadline?: string | null
           description?: string
           id?: string
+          seller_visibility_status?: string
           title?: string
           user_id?: string
           images?: string[] | null
@@ -250,6 +280,65 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_offer_matches: {
+        Row: {
+          created_at: string | null
+          delivery_note: string | null
+          difference_note: string | null
+          id: string
+          image_url: string | null
+          match_reason: string
+          match_score: number
+          price: string | null
+          request_id: string
+          risk_note: string | null
+          source_name: string
+          status: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_note?: string | null
+          difference_note?: string | null
+          id?: string
+          image_url?: string | null
+          match_reason: string
+          match_score?: number
+          price?: string | null
+          request_id: string
+          risk_note?: string | null
+          source_name: string
+          status?: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_note?: string | null
+          difference_note?: string | null
+          id?: string
+          image_url?: string | null
+          match_reason?: string
+          match_score?: number
+          price?: string | null
+          request_id?: string
+          risk_note?: string | null
+          source_name?: string
+          status?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_offer_matches_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
             referencedColumns: ["id"]
           },
         ]

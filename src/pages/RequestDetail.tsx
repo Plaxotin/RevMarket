@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X, CheckCircle, Pencil } from "lucide-react";
+import { MapPin, Clock, MessageSquare, User, Heart, Loader2, Trash2, ChevronLeft, ChevronRight, X, CheckCircle, Pencil, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Navbar } from "@/components/Navbar";
 import { checkAuth } from "@/utils/auth";
@@ -27,9 +27,17 @@ import { CATEGORIES } from "@/data/categories";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { BuyerContacts } from "@/components/BuyerContacts";
 import { ReportButton } from "@/components/ReportButton";
+import { AiMatchesPanel } from "@/components/AiMatchesPanel";
+import {
+  AiMatch,
+  createDemoAiMatches,
+  normalizeAiMode,
+  normalizeAiStatus,
+  normalizeSellerVisibility,
+} from "@/lib/aiMarketplace";
 
-/** Форма «Сделать предложение» и сайдбар продавца скрыты — позже отдельный интерфейс для авторизованных продавцов. Поставьте true, чтобы вернуть блок. */
-const SHOW_OFFER_SIDEBAR = false;
+/** Сайдбар продавца показываем только для заявок, открытых для индивидуальных откликов. */
+const SHOW_OFFER_SIDEBAR = true;
 
 const getTimeAgo = (dateString: string) => {
   const date = new Date(dateString);
@@ -54,6 +62,7 @@ const RequestDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [request, setRequest] = useState<any>(null);
   const [offers, setOffers] = useState<any[]>([]);
+  const [aiMatches, setAiMatches] = useState<AiMatch[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -77,6 +86,11 @@ const RequestDetail = () => {
     deadline: "",
     images: [] as string[],
   });
+  const aiStatus = normalizeAiStatus(request?.ai_search_status);
+  const aiMode = normalizeAiMode(request?.ai_mode);
+  const sellerVisibility = normalizeSellerVisibility(request?.seller_visibility_status);
+  const isOwner = !!user && !!request && user.id === request.user_id;
+  const sellerPublished = sellerVisibility === "published";
 
   const formatEditBudgetDisplay = (value: string) => {
     if (!value) return "";
@@ -174,6 +188,18 @@ const RequestDetail = () => {
       .order("created_at", { ascending: false });
 
     setOffers(offersData || []);
+
+    if (currentUser && requestData?.user_id === currentUser.id) {
+      const { data: aiMatchesData } = await supabase
+        .from("ai_offer_matches")
+        .select("*")
+        .eq("request_id", id)
+        .order("match_score", { ascending: false });
+
+      setAiMatches((aiMatchesData || []) as AiMatch[]);
+    } else {
+      setAiMatches([]);
+    }
 
     // Проверяем подписку на уведомления
     if (currentUser && requestData?.user_id === currentUser.id) {
@@ -364,6 +390,119 @@ const RequestDetail = () => {
     }
 
     setSubmitting(false);
+  };
+
+  const handleGenerateDemoAiMatches = async () => {
+    if (!user || !request || user.id !== request.user_id || !id) return;
+
+    setSubmitting(true);
+    try {
+      const demoMatches = createDemoAiMatches(request, id);
+      const { error: insertError } = await supabase
+        .from("ai_offer_matches")
+        .insert(demoMatches);
+
+      if (insertError) {
+        toast({
+          title: "Ошибка AI-подбора",
+          description: translateSupabaseError(insertError.message),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const completedAt = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("requests")
+        .update({
+          ai_search_status: "results_ready",
+          ai_search_completed_at: completedAt,
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        toast({
+          title: "Подборка создана",
+          description: "Но статус заявки не обновился: " + translateSupabaseError(updateError.message),
+        });
+      } else {
+        setRequest((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                ai_search_status: "results_ready",
+                ai_search_completed_at: completedAt,
+              }
+            : prev
+        );
+      }
+
+      toast({
+        title: "AI-подборка готова",
+        description: "Показали лучшие варианты и подсказки для ручной проверки.",
+      });
+      supabase.functions.invoke("send-ai-results-notification", {
+        body: { requestId: id },
+      }).catch((error) => {
+        console.error("Failed to send AI results notification:", error);
+      });
+      await loadData();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePublishForSellers = async () => {
+    if (!user || !request || user.id !== request.user_id || !id) return;
+
+    setSubmitting(true);
+    try {
+      const nextAiMode = aiMode === "ai_only" ? "ai_and_sellers" : aiMode;
+      const { error } = await supabase
+        .from("requests")
+        .update({
+          ai_mode: nextAiMode,
+          seller_visibility_status: "published",
+        })
+        .eq("id", id);
+
+      if (error) {
+        toast({
+          title: "Ошибка публикации",
+          description: translateSupabaseError(error.message),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setRequest((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              ai_mode: nextAiMode,
+              seller_visibility_status: "published",
+            }
+          : prev
+      );
+      toast({
+        title: "Заявка открыта продавцам",
+        description: "Теперь продавцы смогут оставить индивидуальные предложения.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGenerateSellerDraft = () => {
+    if (!request) return;
+
+    const budgetLine = request.budget ? `Ориентируемся на ваш бюджет ${formatPrice(request.budget)} ₽.` : "Готовы предложить несколько вариантов по бюджету.";
+    setOfferForm((prev) => ({
+      ...prev,
+      description:
+        prev.description ||
+        `Здравствуйте! Можем предложить вариант по запросу "${request.title}". ${budgetLine} Подскажем по наличию, срокам и комплектации, а также предложим аналог, если точной позиции не будет.`,
+    }));
   };
 
   const handleSaveRequestEdit = async (e: React.FormEvent) => {
@@ -802,6 +941,21 @@ const RequestDetail = () => {
                       </span>
                       <Clock className="h-4 w-4 shrink-0" />
                       <span className="shrink-0">{getTimeAgo(request.created_at)}</span>
+                      {request.ai_mode && (
+                        <>
+                          <span className="text-muted-foreground/50 shrink-0 select-none" aria-hidden>
+                            ·
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                            <Sparkles className="h-3 w-3" />
+                            {aiMode === "ai_only"
+                              ? "AI-подбор"
+                              : aiMode === "sellers_only"
+                                ? "Отклики продавцов"
+                                : "AI + продавцы"}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </CardHeader>
                   {((user && user.id === request.user_id && isSubscribed) ||
@@ -848,6 +1002,16 @@ const RequestDetail = () => {
               )}
             </Card>
 
+            <AiMatchesPanel
+              status={aiStatus}
+              matches={aiMatches}
+              isOwner={isOwner}
+              sellerPublished={sellerPublished}
+              onGenerateDemoMatches={handleGenerateDemoAiMatches}
+              onPublishForSellers={handlePublishForSellers}
+              isBusy={submitting}
+            />
+
             <Card className="shadow-card animate-fade-in flex-1 flex flex-col min-h-0">
               <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
@@ -856,7 +1020,14 @@ const RequestDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
-                {offers.length === 0 ? (
+                {!sellerPublished ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p className="font-medium text-foreground">Заявка пока не открыта продавцам</p>
+                    <p className="mt-1 text-sm">
+                      Покупатель сначала ожидает AI-подборку и сможет подвесить заявку для индивидуальных откликов позже.
+                    </p>
+                  </div>
+                ) : offers.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     Пока нет предложений
                   </p>
@@ -930,7 +1101,7 @@ const RequestDetail = () => {
             </Card>
           </div>
 
-          {SHOW_OFFER_SIDEBAR && (
+          {SHOW_OFFER_SIDEBAR && sellerPublished && (
           <div className="flex-1 min-w-[280px] flex flex-col min-h-0 lg:max-w-md">
             <Card className="shadow-card sticky top-6 animate-scale-in flex-1 flex flex-col w-full min-h-0">
               <CardHeader className="flex-shrink-0">
@@ -1006,6 +1177,17 @@ const RequestDetail = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="offer-description">Описание</Label>
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                      <div className="mb-2 flex items-start gap-2 text-sm">
+                        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <p className="text-muted-foreground">
+                          AI-помощник проверит, чтобы отклик отвечал на запрос, цену и сроки. Можно начать с черновика.
+                        </p>
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={handleGenerateSellerDraft}>
+                        Сгенерировать черновик
+                      </Button>
+                    </div>
                     <Textarea
                       id="offer-description"
                       placeholder="Опишите ваше предложение..."

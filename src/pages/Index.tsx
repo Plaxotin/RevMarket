@@ -8,7 +8,7 @@ import { CreateRequestDialog } from "@/components/CreateRequestDialog";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Filter, ChevronDown } from "lucide-react";
+import { Loader2, Filter, ChevronDown, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FILTER_CATEGORIES } from "@/data/categories";
 import { checkAuth } from "@/utils/auth";
@@ -38,6 +38,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("Все");
   const [selectedCity, setSelectedCity] = useState<string>("Россия, все города");
   const [requests, setRequests] = useState<any[]>([]);
+  const [offerCounts, setOfferCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -92,6 +93,21 @@ const Index = () => {
         });
       } else {
         setRequests(data || []);
+        const requestIds = (data || []).map((request: any) => request.id);
+        if (requestIds.length > 0) {
+          const { data: offersData } = await supabase
+            .from("offers_visible")
+            .select("request_id")
+            .in("request_id", requestIds);
+
+          const counts = (offersData || []).reduce<Record<string, number>>((acc, offer) => {
+            acc[offer.request_id] = (acc[offer.request_id] || 0) + 1;
+            return acc;
+          }, {});
+          setOfferCounts(counts);
+        } else {
+          setOfferCounts({});
+        }
       }
     } catch (e) {
       console.error("Network error loading requests:", e);
@@ -119,6 +135,23 @@ const Index = () => {
     return a === b || a.includes(b) || b.includes(a);
   };
 
+  const scoreSemanticMatch = (req: any, query: string) => {
+    if (!query.trim()) return 0;
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const title = (req.title ?? "").toLowerCase();
+    const desc = (req.description ?? "").toLowerCase();
+    const category = (req.category ?? "").toLowerCase();
+    const city = (req.city ?? "").toLowerCase();
+
+    return terms.reduce((score, term) => {
+      if (title.includes(term)) return score + 4;
+      if (category.includes(term)) return score + 3;
+      if (city.includes(term)) return score + 2;
+      if (desc.includes(term)) return score + 1;
+      return score;
+    }, 0);
+  };
+
   const filteredRequests = requests
     .filter(req => selectedCategory === "Все" || req.category === selectedCategory)
     .filter(req => cityMatchesFilter(req.city, selectedCity))
@@ -127,8 +160,11 @@ const Index = () => {
       const q = searchQuery.toLowerCase();
       const title = (req.title ?? "").toLowerCase();
       const desc = (req.description ?? "").toLowerCase();
-      return title.includes(q) || desc.includes(q);
-    });
+      const category = (req.category ?? "").toLowerCase();
+      const city = (req.city ?? "").toLowerCase();
+      return title.includes(q) || desc.includes(q) || category.includes(q) || city.includes(q) || scoreSemanticMatch(req, q) > 0;
+    })
+    .sort((a, b) => scoreSemanticMatch(b, searchQuery) - scoreSemanticMatch(a, searchQuery));
   
   return (
     <div className="min-h-screen relative">
@@ -163,6 +199,12 @@ const Index = () => {
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
                 Актуальные запросы
               </h2>
+              {searchQuery && (
+                <div className="mx-auto mt-4 flex max-w-xl items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/85">
+                  <Sparkles className="h-4 w-4" />
+                  AI-ранжирование показывает сначала заявки, где совпали смысл, категория, город или бюджет.
+                </div>
+              )}
             </div>
             
             {/* Мобильная версия - выпадающий список фильтров */}
@@ -248,7 +290,7 @@ const Index = () => {
                       budget={request.budget || "Не указан"}
                       location={request.city || "Не указан"}
                       timeAgo={getTimeAgo(request.created_at)}
-                      offersCount={0}
+                      offersCount={offerCounts[request.id] || 0}
                       userId={request.user_id}
                       currentUserId={currentUser?.id}
                       images={request.images}
