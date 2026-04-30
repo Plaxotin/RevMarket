@@ -4,8 +4,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]  # Запускается при пуше в main ветку
-  pull_request:
-    branches: [ main ]  # И при создании PR в main
 
 # Разрешения для GitHub Pages
 permissions:
@@ -49,6 +47,7 @@ jobs:
 
   # Деплой на GitHub Pages
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
