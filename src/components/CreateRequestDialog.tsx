@@ -458,27 +458,51 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
       const enrichedDescription = requestData.aiCriteria.trim()
         ? `${requestData.description.trim()}\n\nКритерии для AI-подбора: ${requestData.aiCriteria.trim()}`.trim()
         : requestData.description;
+      const baseRequestPayload = {
+        user_id: userId,
+        title: requestData.title,
+        description: enrichedDescription,
+        category: requestData.category,
+        budget: requestData.budget || null,
+        city: requestData.city || null,
+        images: images.length > 0 ? images : null,
+      };
 
-      const { data: inserted, error } = await supabase
+      const aiRequestPayload = {
+        ...baseRequestPayload,
+        ai_mode: aiMode,
+        ai_search_status: isAiEnabled ? "queued" : "disabled",
+        seller_visibility_status: areSellersEnabled ? "published" : "draft",
+        ai_summary: aiSummary,
+        ai_search_started_at: isAiEnabled ? new Date().toISOString() : null,
+      };
+
+      let inserted: { id: string } | null = null;
+      let error: { message: string } | null = null;
+
+      const firstAttempt = await supabase
         .from("requests")
-        .insert([
-          {
-            user_id: userId,
-            title: requestData.title,
-            description: enrichedDescription,
-            category: requestData.category,
-            budget: requestData.budget || null,
-            city: requestData.city || null,
-            images: images.length > 0 ? images : null,
-            ai_mode: aiMode,
-            ai_search_status: isAiEnabled ? "queued" : "disabled",
-            seller_visibility_status: areSellersEnabled ? "published" : "draft",
-            ai_summary: aiSummary,
-            ai_search_started_at: isAiEnabled ? new Date().toISOString() : null,
-          },
-        ])
+        .insert([aiRequestPayload])
         .select("id")
         .single();
+      inserted = firstAttempt.data;
+      error = firstAttempt.error;
+
+      const aiColumnsMissing =
+        !!error &&
+        (error.message.includes("Could not find the 'ai_mode' column") ||
+          error.message.includes("schema cache"));
+
+      if (aiColumnsMissing) {
+        console.warn("AI columns are missing in requests table. Falling back to base request payload.");
+        const fallbackAttempt = await supabase
+          .from("requests")
+          .insert([baseRequestPayload])
+          .select("id")
+          .single();
+        inserted = fallbackAttempt.data;
+        error = fallbackAttempt.error;
+      }
 
       if (error) {
         toast({
