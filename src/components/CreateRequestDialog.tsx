@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CATEGORIES } from "@/data/categories";
-import { Loader2, HelpCircle } from "lucide-react";
+import { CheckCircle, Loader2, HelpCircle, Sparkles } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { translateSupabaseError } from "@/utils/errorMessages";
 import { RubleIcon } from "@/components/RubleIcon";
@@ -36,6 +36,7 @@ import { CityCombobox } from "@/components/CityCombobox";
 import { formatPrice } from "@/lib/utils";
 import { RequestCard } from "@/components/RequestCard";
 import { isMockSmsAuth, signInForSmsMock } from "@/utils/mockSmsAuth";
+import { AI_MODE_LABELS, AiMode, buildAiSummary, getAiQualityHints } from "@/lib/aiMarketplace";
 
 const categories = CATEGORIES;
 
@@ -64,7 +65,9 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
     category: "",
     budget: "",
     city: "",
+    aiCriteria: "",
   });
+  const [aiMode, setAiMode] = useState<AiMode>("ai_and_sellers");
   const [images, setImages] = useState<string[]>([]);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,7 +76,13 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
     email: '',
     telegramUsername: '',
     subscribe: true,
+    smsEnabled: false,
+    aiResultsEnabled: true,
+    sellerOffersEnabled: true,
+    digestFrequency: "instant",
   });
+  const aiSummary = buildAiSummary(requestData);
+  const aiHints = getAiQualityHints(requestData);
 
   const formatBudgetDisplay = (value: string) => {
     if (!value) return "";
@@ -169,6 +178,10 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
           email: subscriptionData.email,
           telegram_username: subscriptionData.telegramUsername || null,
           is_active: true,
+          sms_enabled: subscriptionData.smsEnabled,
+          ai_results_enabled: subscriptionData.aiResultsEnabled,
+          seller_offers_enabled: subscriptionData.sellerOffersEnabled,
+          digest_frequency: subscriptionData.digestFrequency,
         }, {
           onConflict: 'user_id',
         });
@@ -199,7 +212,9 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
       category: "",
       budget: "",
       city: "",
+      aiCriteria: "",
     });
+    setAiMode("ai_and_sellers");
     setImages([]);
     setHowItWorksOpen(false);
     setCityTouched(false);
@@ -207,6 +222,10 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
       email: '',
       telegramUsername: '',
       subscribe: true,
+      smsEnabled: false,
+      aiResultsEnabled: true,
+      sellerOffersEnabled: true,
+      digestFrequency: "instant",
     });
     setGuestWizardStep("product");
   };
@@ -434,21 +453,56 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
     setLoading(true);
 
     try {
-      const { data: inserted, error } = await supabase
+      const isAiEnabled = aiMode === "ai_only" || aiMode === "ai_and_sellers";
+      const areSellersEnabled = aiMode === "sellers_only" || aiMode === "ai_and_sellers";
+      const enrichedDescription = requestData.aiCriteria.trim()
+        ? `${requestData.description.trim()}\n\nКритерии для AI-подбора: ${requestData.aiCriteria.trim()}`.trim()
+        : requestData.description;
+      const baseRequestPayload = {
+        user_id: userId,
+        title: requestData.title,
+        description: enrichedDescription,
+        category: requestData.category,
+        budget: requestData.budget || null,
+        city: requestData.city || null,
+        images: images.length > 0 ? images : null,
+      };
+
+      const aiRequestPayload = {
+        ...baseRequestPayload,
+        ai_mode: aiMode,
+        ai_search_status: isAiEnabled ? "queued" : "disabled",
+        seller_visibility_status: areSellersEnabled ? "published" : "draft",
+        ai_summary: aiSummary,
+        ai_search_started_at: isAiEnabled ? new Date().toISOString() : null,
+      };
+
+      let inserted: { id: string } | null = null;
+      let error: { message: string } | null = null;
+
+      const firstAttempt = await supabase
         .from("requests")
-        .insert([
-          {
-            user_id: userId,
-            title: requestData.title,
-            description: requestData.description,
-            category: requestData.category,
-            budget: requestData.budget || null,
-            city: requestData.city || null,
-            images: images.length > 0 ? images : null,
-          },
-        ])
+        .insert([aiRequestPayload])
         .select("id")
         .single();
+      inserted = firstAttempt.data;
+      error = firstAttempt.error;
+
+      const aiColumnsMissing =
+        !!error &&
+        (error.message.includes("Could not find the 'ai_mode' column") ||
+          error.message.includes("schema cache"));
+
+      if (aiColumnsMissing) {
+        console.warn("AI columns are missing in requests table. Falling back to base request payload.");
+        const fallbackAttempt = await supabase
+          .from("requests")
+          .insert([baseRequestPayload])
+          .select("id")
+          .single();
+        inserted = fallbackAttempt.data;
+        error = fallbackAttempt.error;
+      }
 
       if (error) {
         toast({
@@ -541,14 +595,14 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
         <div className="overflow-y-auto max-h-[90vh] pl-6 pr-3 py-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-white/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/50">
         <DialogHeader className="pr-9">
           <DialogTitle className="text-2xl md:text-3xl text-white">
-            Создать запрос
+            Создать AI-заявку
           </DialogTitle>
           <DialogDescription className="text-base text-white/80">
             {user
-              ? "Заполните форму ниже, чтобы создать новый запрос"
+              ? "Опишите задачу: AI подберет варианты из интернета, а продавцы смогут оставить индивидуальный отклик"
               : guestWizardStep === "product"
-                ? "Шаг 1 из 2: опишите искомый товар"
-                : "Шаг 2 из 2: так запрос увидят продавцы. Укажите телефон и контакты для уведомлений о предложениях"}
+                ? "Шаг 1 из 2: опишите, что нужно найти и какие критерии важны"
+                : "Шаг 2 из 2: подтвердите контакты, чтобы получить AI-подборку и отклики продавцов"}
           </DialogDescription>
         </DialogHeader>
 
@@ -582,9 +636,9 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                     <div className="w-12 h-12 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
                       <RubleIcon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-sm font-bold mb-2 text-white">Получите предложения</h3>
+                    <h3 className="text-sm font-bold mb-2 text-white">AI ищет варианты</h3>
                     <p className="text-xs text-white/80">
-                      Продавцы найдут вашу заявку и предложат свои варианты с ценами и условиями
+                      Сервис проверит предложения в интернете и подготовит краткую подборку
                     </p>
                   </div>
                   
@@ -594,9 +648,9 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                       </svg>
                     </div>
-                    <h3 className="text-sm font-bold mb-2 text-white">Выберите лучшее</h3>
+                    <h3 className="text-sm font-bold mb-2 text-white">Подключите продавцов</h3>
                     <p className="text-xs text-white/80">
-                      Сравните предложения, выберите подходящее и оформите сделку безопасно
+                      Если AI не найдет идеальный вариант, продавцы смогут ответить индивидуально
                     </p>
                   </div>
                 </div>
@@ -623,10 +677,23 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
             <Label htmlFor="description" className="text-white">Описание</Label>
             <Textarea
               id="description"
-              placeholder="Подробно опишите, что вам нужно..."
+              placeholder="Подробно опишите товар, модель, состояние, комплектацию, сроки..."
               className="min-h-[80px] bg-white/10 border-white/20 text-white placeholder:text-white/50"
               value={requestData.description}
               onChange={(e) => setRequestData({ ...requestData, description: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="aiCriteria" className="text-white">
+              Что важно для AI-подбора <span className="text-white/60 font-normal">(необязательно)</span>
+            </Label>
+            <Textarea
+              id="aiCriteria"
+              placeholder="Например: только новые, гарантия от 1 года, доставка до 3 дней, можно аналоги"
+              className="min-h-[76px] bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              value={requestData.aiCriteria}
+              onChange={(e) => setRequestData({ ...requestData, aiCriteria: e.target.value })}
             />
           </div>
 
@@ -700,6 +767,46 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
               </Select>
             )}
           </div>
+
+          <div className="space-y-4 rounded-xl border border-white/20 bg-white/10 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-white/20 p-2">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-white">AI понял задачу так</p>
+                <p className="text-sm text-white/80">{aiSummary || "Заполните название, категорию и город, чтобы увидеть резюме."}</p>
+              </div>
+            </div>
+
+            {aiHints.length > 0 && (
+              <div className="space-y-2 rounded-lg bg-black/20 p-3">
+                {aiHints.map((hint) => (
+                  <div key={hint} className="flex items-start gap-2 text-xs text-white/75">
+                    <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-300" />
+                    <span>{hint}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(["ai_and_sellers", "ai_only", "sellers_only"] as AiMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setAiMode(mode)}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs transition ${
+                    aiMode === mode
+                      ? "border-white bg-white/20 text-white"
+                      : "border-white/15 bg-black/10 text-white/70 hover:bg-white/10"
+                  }`}
+                >
+                  {AI_MODE_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          </div>
             </>
           )}
 
@@ -738,7 +845,7 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                 className="rounded cursor-pointer"
               />
               <Label htmlFor="subscribe-notifications" className="text-white cursor-pointer">
-                Получать уведомления о новых предложениях
+                Получать уведомления о подборке и откликах
               </Label>
             </div>
             
@@ -785,6 +892,64 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
                   <p className="text-xs text-white/60">
                     Укажите ваш Telegram username для получения уведомлений в боте
                   </p>
+                </div>
+                
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 text-sm text-white/85">
+                    <input
+                      type="checkbox"
+                      checked={subscriptionData.aiResultsEnabled}
+                      onChange={(e) => setSubscriptionData({
+                        ...subscriptionData,
+                        aiResultsEnabled: e.target.checked
+                      })}
+                      disabled={!user && authStep === 'code'}
+                      className="rounded"
+                    />
+                    AI-подборка готова
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-white/85">
+                    <input
+                      type="checkbox"
+                      checked={subscriptionData.sellerOffersEnabled}
+                      onChange={(e) => setSubscriptionData({
+                        ...subscriptionData,
+                        sellerOffersEnabled: e.target.checked
+                      })}
+                      disabled={!user && authStep === 'code'}
+                      className="rounded"
+                    />
+                    Новый отклик продавца
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-white/85">
+                    <input
+                      type="checkbox"
+                      checked={subscriptionData.smsEnabled}
+                      onChange={(e) => setSubscriptionData({
+                        ...subscriptionData,
+                        smsEnabled: e.target.checked
+                      })}
+                      disabled={!user && authStep === 'code'}
+                      className="rounded"
+                    />
+                    SMS для важных событий
+                  </label>
+                  <Select
+                    value={subscriptionData.digestFrequency}
+                    onValueChange={(value) => setSubscriptionData({
+                      ...subscriptionData,
+                      digestFrequency: value
+                    })}
+                    disabled={!user && authStep === 'code'}
+                  >
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder="Частота" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black/40 backdrop-blur-xl border-white/10">
+                      <SelectItem value="instant" className="text-white focus:bg-white/20 focus:text-white">Сразу</SelectItem>
+                      <SelectItem value="daily" className="text-white focus:bg-white/20 focus:text-white">Дайджест раз в день</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
@@ -890,7 +1055,11 @@ export const CreateRequestDialog = ({ open, onOpenChange, onSuccess, initialCity
               </>
             ) : (
               user
-                ? "Опубликовать запрос"
+                ? aiMode === "ai_only"
+                  ? "Запустить AI-подбор"
+                  : aiMode === "sellers_only"
+                    ? "Опубликовать для продавцов"
+                    : "Запустить AI-подбор и опубликовать"
                 : guestWizardStep === "product"
                   ? "Далее: контакты и публикация"
                   : authStep === "phone"

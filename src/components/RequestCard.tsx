@@ -327,10 +327,16 @@ export const RequestCard = ({
               </div>
             )}
             {timeAgo && (
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span>{timeAgo}</span>
-                {budget && <span className="ml-2">• {budget ? `${formatPrice(budget)} ₽` : "Бюджет не указан"}</span>}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Clock className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{timeAgo}</span>
+                  {budget && <span className="ml-2 shrink-0">• {budget ? `${formatPrice(budget)} ₽` : "Бюджет не указан"}</span>}
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-700">
+                  <MessageSquare className="h-3 w-3" />
+                  {offersCount}
+                </span>
               </div>
             )}
             {!timeAgo && budget && (

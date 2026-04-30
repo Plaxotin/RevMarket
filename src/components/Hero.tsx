@@ -1,6 +1,24 @@
 import type { CSSProperties } from "react";
 import { ChevronsDown } from "lucide-react";
 
+const heroSteps = [
+  {
+    step: "1",
+    title: "Создайте запрос",
+    description: "Опишите, что хотите купить, и укажите важные условия.",
+  },
+  {
+    step: "2",
+    title: "Сравните предложения",
+    description: "Продавцы сами откликнутся, а вы выберете лучшее предложение.",
+  },
+  {
+    step: "3",
+    title: "Покупайте выгодно",
+    description: "Оформляйте сделку на своих условиях, когда нашли идеальный вариант.",
+  },
+];
+
 const scrollToCatalog = () => {
   document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -93,13 +111,27 @@ export const Hero = () => {
       </div>
       
       <div className="container relative z-10 px-4 mx-auto">
-        <div className="max-w-3xl mx-auto animate-slide-up text-center">
+        <div className="max-w-5xl mx-auto animate-slide-up text-center">
           <h1 className="hero-title-shimmer text-2xl sm:text-3xl md:text-4xl font-black leading-snug tracking-tight">
             ПОКУПАЙ НА СВОИХ УСЛОВИЯХ
           </h1>
           <p className="mt-3 md:mt-4 text-sm md:text-[15px] text-white/90 leading-relaxed max-w-2xl mx-auto animate-fade-in">
             РеверсМаркет меняет привычную схему торговли: разместите, что хотите купить — и пусть продавцы сделают вам подходящее предложение.
           </p>
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:mt-7 sm:grid-cols-3 sm:gap-4">
+            {heroSteps.map((item) => (
+              <article
+                key={item.step}
+                className="relative rounded-2xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-transform duration-200 hover:-translate-y-1"
+              >
+                <div className="mx-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm font-black text-primary shadow-sm">
+                  {item.step}
+                </div>
+                <h3 className="mt-3 text-sm font-semibold leading-tight text-white md:text-[15px]">{item.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-white/80 md:text-sm">{item.description}</p>
+              </article>
+            ))}
+          </div>
           <div className="mt-5 flex justify-center md:mt-6">
             <button
               type="button"

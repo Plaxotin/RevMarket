@@ -35,6 +35,7 @@ const cities = [
 
 interface Request {
   id: string;
+  user_id?: string;
   title: string;
   description: string;
   category: string;
@@ -86,6 +87,14 @@ const Profile = () => {
     email: "",
     city: "",
   });
+  const [notificationData, setNotificationData] = useState({
+    subscribe: true,
+    telegramUsername: "",
+    smsEnabled: false,
+    aiResultsEnabled: true,
+    sellerOffersEnabled: true,
+    digestFrequency: "instant",
+  });
 
   useEffect(() => {
     const checkUser = async () => {
@@ -134,6 +143,22 @@ const Profile = () => {
       };
       console.log("Setting profile data with auth email:", newProfileData);
       setProfileData(newProfileData);
+      const { data: subscription } = await supabase
+        .from("notification_subscriptions")
+        .select("telegram_username, is_active, sms_enabled, ai_results_enabled, seller_offers_enabled, digest_frequency")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (subscription) {
+        setNotificationData({
+          subscribe: subscription.is_active,
+          telegramUsername: subscription.telegram_username || "",
+          smsEnabled: subscription.sms_enabled,
+          aiResultsEnabled: subscription.ai_results_enabled,
+          sellerOffersEnabled: subscription.seller_offers_enabled,
+          digestFrequency: subscription.digest_frequency,
+        });
+      }
     } else if (currentUser) {
       // If no profile exists, use auth user data
       const newProfileData = {
@@ -246,6 +271,36 @@ const Profile = () => {
       });
       setUpdating(false);
       return;
+    }
+
+    if (notificationData.subscribe && profileData.email) {
+      const { error: subscriptionError } = await supabase
+        .from("notification_subscriptions")
+        .upsert({
+          user_id: user.id,
+          email: profileData.email,
+          telegram_username: notificationData.telegramUsername || null,
+          is_active: true,
+          sms_enabled: notificationData.smsEnabled,
+          ai_results_enabled: notificationData.aiResultsEnabled,
+          seller_offers_enabled: notificationData.sellerOffersEnabled,
+          digest_frequency: notificationData.digestFrequency,
+        }, {
+          onConflict: "user_id",
+        });
+
+      if (subscriptionError) {
+        toast({
+          title: "Профиль сохранен",
+          description: "Но настройки уведомлений не обновились: " + translateSupabaseError(subscriptionError.message),
+          variant: "destructive",
+        });
+      }
+    } else if (!notificationData.subscribe) {
+      await supabase
+        .from("notification_subscriptions")
+        .update({ is_active: false })
+        .eq("user_id", user.id);
     }
 
     // Update email in auth.users if changed
@@ -558,6 +613,99 @@ const Profile = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="rounded-xl border bg-muted/30 p-4 space-y-4">
+                    <div>
+                      <h3 className="font-semibold">Уведомления маркетплейса</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Управляйте событиями отдельно: AI-подборка, отклики продавцов и частота сообщений.
+                      </p>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={notificationData.subscribe}
+                        onChange={(e) => setNotificationData({ ...notificationData, subscribe: e.target.checked })}
+                        className="rounded"
+                      />
+                      Получать уведомления
+                    </label>
+
+                    {notificationData.subscribe && (
+                      <div className="space-y-4 pl-0 sm:pl-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="profile-telegram">Telegram username</Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">@</span>
+                            <Input
+                              id="profile-telegram"
+                              value={notificationData.telegramUsername}
+                              onChange={(e) => setNotificationData({
+                                ...notificationData,
+                                telegramUsername: e.target.value.replace("@", ""),
+                              })}
+                              placeholder="username"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={notificationData.aiResultsEnabled}
+                              onChange={(e) => setNotificationData({
+                                ...notificationData,
+                                aiResultsEnabled: e.target.checked,
+                              })}
+                              className="rounded"
+                            />
+                            AI-подборка готова
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={notificationData.sellerOffersEnabled}
+                              onChange={(e) => setNotificationData({
+                                ...notificationData,
+                                sellerOffersEnabled: e.target.checked,
+                              })}
+                              className="rounded"
+                            />
+                            Новый отклик продавца
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={notificationData.smsEnabled}
+                              onChange={(e) => setNotificationData({
+                                ...notificationData,
+                                smsEnabled: e.target.checked,
+                              })}
+                              className="rounded"
+                            />
+                            SMS для важных событий
+                          </label>
+                          <Select
+                            value={notificationData.digestFrequency}
+                            onValueChange={(value) => setNotificationData({
+                              ...notificationData,
+                              digestFrequency: value,
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Частота" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="instant">Сразу</SelectItem>
+                              <SelectItem value="daily">Дайджест раз в день</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={updating}>
